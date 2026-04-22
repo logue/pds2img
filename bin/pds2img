@@ -1,0 +1,308 @@
+#!/usr/bin/env node
+
+import { access, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { constants as fsConstants } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { Command } from 'commander';
+import { DOMParser as XmldomParser } from 'xmldom';
+
+async function fileExists(filePath) {
+  try {
+    await access(filePath, fsConstants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function findExistingPath(candidates) {
+  for (const candidate of candidates) {
+    if (await fileExists(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+function swapArgvLegacyType(argv) {
+  return argv.map((arg) => (arg === '-type' ? '--type' : arg));
+}
+
+function getOutputExtension(format) {
+  return format === 'tiff' ? '.tiff' : '.png';
+}
+
+function normalizeOutputPath(inputPath, format, explicitOutput) {
+  if (explicitOutput) {
+    return path.resolve(process.cwd(), explicitOutput);
+  }
+
+  const ext = getOutputExtension(format);
+  const parsed = path.parse(inputPath);
+  return path.join(parsed.dir, `${parsed.name}${ext}`);
+}
+
+async function collectDirectoryJobs(directoryPath) {
+  const entries = await readdir(directoryPath, { withFileTypes: true });
+  const files = entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => entry.name);
+  const fileSet = new Set(files.map((name) => name.toLowerCase()));
+
+  const jobs = [];
+
+  // PDS3 candidates: IMG files with a same-stem LBL file.
+  for (const fileName of files) {
+    if (path.extname(fileName).toLowerCase() !== '.img') {
+      continue;
+    }
+
+    const stem = path.parse(fileName).name;
+    if (fileSet.has(`${stem}.lbl`.toLowerCase())) {
+      jobs.push({
+        kind: 'pds3',
+        inputPath: path.join(directoryPath, fileName),
+      });
+    }
+  }
+
+  // PDS4 candidates: XML label files.
+  for (const fileName of files) {
+    if (path.extname(fileName).toLowerCase() === '.xml') {
+      jobs.push({
+        kind: 'pds4',
+        inputPath: path.join(directoryPath, fileName),
+      });
+    }
+  }
+
+  return jobs;
+}
+
+function getFirstTagText(element, tagName) {
+  return (
+    element?.getElementsByTagName(tagName).item(0)?.textContent?.trim() || null
+  );
+}
+
+async function buildPds3Image(inputPath, lib) {
+  const parsed = path.parse(inputPath);
+  const basePath = path.join(parsed.dir, parsed.name);
+
+  const imgPath =
+    parsed.ext.toLowerCase() === '.img'
+      ? inputPath
+      : await findExistingPath([`${basePath}.IMG`, `${basePath}.img`]);
+
+  if (!imgPath) {
+    throw new Error(`IMG file not found for input: ${inputPath}`);
+  }
+
+  const lblPath = await findExistingPath([
+    `${basePath}.LBL`,
+    `${basePath}.lbl`,
+    path.join(path.dirname(imgPath), `${path.parse(imgPath).name}.LBL`),
+    path.join(path.dirname(imgPath), `${path.parse(imgPath).name}.lbl`),
+  ]);
+
+  if (!lblPath) {
+    throw new Error(`LBL file not found for IMG: ${imgPath}`);
+  }
+
+  const [lblBuffer, imgBuffer] = await Promise.all([
+    readFile(lblPath),
+    readFile(imgPath),
+  ]);
+
+  const label = lib.parseLBL(
+    lblBuffer.buffer.slice(
+      lblBuffer.byteOffset,
+      lblBuffer.byteOffset + lblBuffer.byteLength,
+    ),
+  );
+  const image = new lib.PDS3Image(
+    label,
+    imgBuffer.buffer.slice(
+      imgBuffer.byteOffset,
+      imgBuffer.byteOffset + imgBuffer.byteLength,
+    ),
+  );
+
+  return { image, sourcePath: imgPath };
+}
+
+async function buildPds4Image(inputPath, lib) {
+  const parsed = path.parse(inputPath);
+  const basePath = path.join(parsed.dir, parsed.name);
+
+  const xmlPath =
+    parsed.ext.toLowerCase() === '.xml'
+      ? inputPath
+      : await findExistingPath([`${basePath}.xml`, `${basePath}.XML`]);
+
+  if (!xmlPath) {
+    throw new Error(`XML file not found for input: ${inputPath}`);
+  }
+
+  const xmlText = await readFile(xmlPath, 'utf8');
+  const xml = new XmldomParser().parseFromString(xmlText, 'application/xml');
+
+  const fileArea = xml.getElementsByTagName('File_Area_Observational').item(0);
+  const fileTag = xml.getElementsByTagName('File').item(0);
+  const imageFileName =
+    getFirstTagText(fileArea, 'file_name') ||
+    getFirstTagText(fileTag, 'file_name');
+
+  const fallbackImgName = `${path.parse(xmlPath).name}.IMG`;
+  const imgPath = imageFileName
+    ? path.resolve(path.dirname(xmlPath), imageFileName)
+    : await findExistingPath([
+        path.join(path.dirname(xmlPath), fallbackImgName),
+        path.join(path.dirname(xmlPath), fallbackImgName.toLowerCase()),
+      ]);
+
+  if (!imgPath || !(await fileExists(imgPath))) {
+    throw new Error(
+      `IMG file referenced by XML was not found: ${imageFileName || fallbackImgName}`,
+    );
+  }
+
+  const imgBuffer = await readFile(imgPath);
+  const image = new lib.PDS4Image(
+    xml,
+    imgBuffer.buffer.slice(
+      imgBuffer.byteOffset,
+      imgBuffer.byteOffset + imgBuffer.byteLength,
+    ),
+  );
+
+  return { image, sourcePath: xmlPath };
+}
+
+async function main() {
+  const program = new Command();
+
+  program
+    .name('pds2img')
+    .description('Convert PDS3/PDS4 products to PNG or TIFF')
+    .option(
+      '-i, --input <pathOrStem>',
+      'input base path, IMG path, or XML path',
+    )
+    .option(
+      '-d, --dir <directory>',
+      'convert all supported datasets in a directory',
+    )
+    .option('-t, --type <format>', 'output image format: png or tiff', 'png')
+    .option('-o, --output <file>', 'output file path')
+    .showHelpAfterError();
+
+  program.parse(swapArgvLegacyType(process.argv));
+  const options = program.opts();
+
+  const format = String(options.type).toLowerCase();
+  if (format !== 'png' && format !== 'tiff') {
+    throw new Error(`Unsupported type: ${options.type}. Use png or tiff.`);
+  }
+
+  const hasInput =
+    typeof options.input === 'string' && options.input.length > 0;
+  const hasDir = typeof options.dir === 'string' && options.dir.length > 0;
+
+  if (!hasInput && !hasDir) {
+    throw new Error('Either --input (-i) or --dir (-d) is required.');
+  }
+
+  if (hasInput && hasDir) {
+    throw new Error('Use either --input (-i) or --dir (-d), not both.');
+  }
+
+  const distEntryPath = fileURLToPath(
+    new URL('../dist/index.es.js', import.meta.url),
+  );
+
+  if (!(await fileExists(distEntryPath))) {
+    throw new Error('dist/index.es.js not found. Run "pnpm run build" first.');
+  }
+
+  const lib = await import(pathToFileURL(distEntryPath).href);
+
+  if (hasDir) {
+    const directoryPath = path.resolve(process.cwd(), String(options.dir));
+    const jobs = await collectDirectoryJobs(directoryPath);
+
+    if (jobs.length === 0) {
+      throw new Error(
+        `No convertible datasets found in directory: ${directoryPath}. ` +
+          'Expected PDS3 (.IMG + .LBL) or PDS4 (.xml).',
+      );
+    }
+
+    if (options.output && path.extname(String(options.output))) {
+      throw new Error('In --dir mode, --output (-o) must be a directory path.');
+    }
+
+    const outputDirectory = options.output
+      ? path.resolve(process.cwd(), String(options.output))
+      : directoryPath;
+
+    await mkdir(outputDirectory, { recursive: true });
+
+    let converted = 0;
+    const outputExt = getOutputExtension(format);
+
+    for (const job of jobs) {
+      const result =
+        job.kind === 'pds4'
+          ? await buildPds4Image(job.inputPath, lib)
+          : await buildPds3Image(job.inputPath, lib);
+
+      const outputBuffer =
+        format === 'png' ? lib.toPNG(result.image) : lib.toTIFF(result.image);
+      const outputName = `${path.parse(result.sourcePath).name}${outputExt}`;
+      const outputPath = path.join(outputDirectory, outputName);
+
+      await writeFile(outputPath, Buffer.from(outputBuffer));
+      converted += 1;
+      process.stdout.write(`Converted: ${outputPath}\n`);
+    }
+
+    process.stdout.write(`Done: ${converted} file(s) converted.\n`);
+    return;
+  }
+
+  const inputPath = path.resolve(process.cwd(), String(options.input));
+
+  let result;
+  const ext = path.extname(inputPath).toLowerCase();
+
+  if (ext === '.xml') {
+    result = await buildPds4Image(inputPath, lib);
+  } else if (ext === '.img') {
+    result = await buildPds3Image(inputPath, lib);
+  } else {
+    // No extension: try PDS3 first (IMG+LBL), then PDS4 (XML)
+    try {
+      result = await buildPds3Image(inputPath, lib);
+    } catch {
+      result = await buildPds4Image(inputPath, lib);
+    }
+  }
+
+  const outputPath = normalizeOutputPath(
+    result.sourcePath,
+    format,
+    options.output,
+  );
+  const outputBuffer =
+    format === 'png' ? lib.toPNG(result.image) : lib.toTIFF(result.image);
+
+  await writeFile(outputPath, Buffer.from(outputBuffer));
+  process.stdout.write(`Converted: ${outputPath}\n`);
+}
+
+main().catch((error) => {
+  process.stderr.write(`Error: ${error?.message || String(error)}\n`);
+  process.exit(1);
+});

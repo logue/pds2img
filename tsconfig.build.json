@@ -1,0 +1,23 @@
+{
+  "extends": "@tsconfig/node-lts/tsconfig.json",
+  "compilerOptions": {
+    "lib": ["DOM"],
+    "useDefineForClassFields": true,
+
+    /* modules — same as tsconfig.json but without allowImportingTsExtensions
+       so that TypeScript can emit declaration files */
+    "moduleDetection": "force",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+
+    /* declaration output */
+    "noEmit": false,
+    "rootDir": "./src",
+    "declaration": true,
+    "declarationDir": "./dist",
+    "emitDeclarationOnly": true
+  },
+  "include": ["src"]
+}
