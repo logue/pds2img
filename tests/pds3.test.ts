@@ -41,6 +41,72 @@ describe('PDS3Image (Voyager 1 / C3593229_RAW)', () => {
     expect(pixels.every(Number.isFinite)).toBe(true);
   });
 
+  test('uses ^IMAGE record pointer and LINE_PREFIX_BYTES for pixel offsets', () => {
+    const lblBuffer = loadBuffer('C3593229_RAW.LBL');
+    const imgBuffer = loadBuffer('C3593229_RAW.IMG');
+    const label = parseLBL(lblBuffer);
+    const imgBytes = new Uint8Array(imgBuffer);
+    const imageObject = label.IMAGE as Record<string, number>;
+    const imagePointer = label['^IMAGE'] as [string, number];
+    const recordBytes = label.RECORD_BYTES as number;
+    const linePrefixBytes = imageObject.LINE_PREFIX_BYTES;
+    const imageOffset = (imagePointer[1] - 1) * recordBytes;
+
+    expect(image.getPixel(0, 0)).toBe(imgBytes[imageOffset + linePrefixBytes]);
+
+    const secondLineOffset =
+      imageOffset + (image.width + linePrefixBytes) + linePrefixBytes;
+
+    expect(image.getPixel(0, 1)).toBe(imgBytes[secondLineOffset]);
+  });
+
+  test('supports nested OBJECT = IMAGE and MSB_INTEGER samples', () => {
+    const buffer = new Uint8Array([0x00, 0x00, 0xff, 0xfe, 0x00, 0x02]).buffer;
+    const image = new PDS3Image(
+      {
+        RECORD_BYTES: 2,
+        '^IMAGE': ['synthetic.img', 2],
+        PRODUCT: {
+          IMAGE: {
+            LINES: 1,
+            LINE_SAMPLES: 2,
+            LINE_PREFIX_BYTES: 0,
+            SAMPLE_TYPE: 'MSB_INTEGER',
+            SAMPLE_BITS: 16,
+          },
+        },
+      },
+      buffer,
+    );
+
+    expect(image.getPixel(0, 0)).toBe(-2);
+    expect(image.getPixel(1, 0)).toBe(2);
+  });
+
+  test('treats INVALID_CONSTANT raw samples as NaN before scaling', () => {
+    const buffer = new Uint8Array([0x80, 0x00, 0x00, 0x02]).buffer;
+    const image = new PDS3Image(
+      {
+        RECORD_BYTES: 2,
+        '^IMAGE': ['synthetic.img', 1],
+        IMAGE: {
+          LINES: 1,
+          LINE_SAMPLES: 2,
+          LINE_PREFIX_BYTES: 0,
+          SAMPLE_TYPE: 'MSB_INTEGER',
+          SAMPLE_BITS: 16,
+          INVALID_CONSTANT: -32768,
+          SCALING_FACTOR: 10,
+          OFFSET: 5,
+        },
+      },
+      buffer,
+    );
+
+    expect(Number.isNaN(image.getPixel(0, 0))).toBe(true);
+    expect(image.getPixel(1, 0)).toBe(25);
+  });
+
   test('toPNG returns a buffer with a valid PNG signature', () => {
     const out = new Uint8Array(toPNG(image));
     // PNG magic: 0x89 'P' 'N' 'G' \r \n 0x1A \n

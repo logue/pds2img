@@ -20,7 +20,7 @@ export function parseLBL(buffer: ArrayBuffer): PDSLabel {
   const stack: PDSLabel[] = [root];
 
   for (const raw of lines) {
-    const line = raw.trim();
+    const line = raw.replace(/\/\*.*?\*\//g, '').trim();
     if (!line || line.startsWith('/*')) continue;
 
     if (line.startsWith('OBJECT')) {

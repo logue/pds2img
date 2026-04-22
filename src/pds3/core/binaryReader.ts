@@ -6,6 +6,7 @@
 export class BinaryReader {
   private readonly view: DataView;
   private readonly littleEndian: boolean;
+  private readonly signed: boolean;
 
   /**
    * @param buffer - Raw image buffer.
@@ -13,8 +14,13 @@ export class BinaryReader {
    *   (e.g. `'MSB_INTEGER'`, `'LSB_INTEGER'`).
    */
   constructor(buffer: ArrayBuffer, sampleType: string) {
+    const normalizedType = sampleType.toUpperCase();
+
     this.view = new DataView(buffer);
-    this.littleEndian = sampleType.includes('LSB');
+    this.littleEndian = normalizedType.includes('LSB');
+    this.signed =
+      normalizedType.includes('INTEGER') &&
+      !normalizedType.includes('UNSIGNED');
   }
 
   /**
@@ -27,11 +33,15 @@ export class BinaryReader {
    */
   read(offset: number, bits: number): number {
     if (bits === 8) {
-      return this.view.getUint8(offset);
+      return this.signed
+        ? this.view.getInt8(offset)
+        : this.view.getUint8(offset);
     }
 
     if (bits === 16) {
-      return this.view.getUint16(offset, this.littleEndian);
+      return this.signed
+        ? this.view.getInt16(offset, this.littleEndian)
+        : this.view.getUint16(offset, this.littleEndian);
     }
 
     throw new Error(`Unsupported bits: ${bits}`);
