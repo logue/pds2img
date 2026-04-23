@@ -4,9 +4,21 @@ import { parseLBL } from './pds3/parser/lblParser';
 import { parseXML } from './pds4/parser/xmlParser';
 import { encodeToPNG } from './encoder/pngEncoder';
 import { encodeToTIFF } from './encoder/tiffEncoder';
+import Meta from './Meta';
 import type { PDSImage } from './interfaces/PdsImage';
 
-export { PDS3Image, PDS4Image, parseLBL, parseXML };
+const { version, date } = Meta;
+
+export {
+  PDS3Image,
+  PDS4Image,
+  parseLBL,
+  parseXML,
+  version,
+  date,
+  encodeToPNG,
+  encodeToTIFF,
+};
 
 function getFileStem(fileName: string): string {
   const dotIndex = fileName.lastIndexOf('.');

@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Command } from 'commander';
 import { DOMParser as XmldomParser } from 'xmldom';
+import { version, date } from '../dist/index.es.js';
 
 async function fileExists(filePath) {
   try {
@@ -186,6 +187,7 @@ async function main() {
   program
     .name('pds2img')
     .description('Convert PDS3/PDS4 products to PNG or TIFF')
+    .version(`${version} (Build: ${date})`, '-v, --version')
     .option(
       '-i, --input <pathOrStem>',
       'input base path, IMG path, or XML path',

@@ -15,5 +15,6 @@ dist/
 !.vscode/extensions.json
 .idea
 
+src/Meta.ts
 *.png
 *.tiff
