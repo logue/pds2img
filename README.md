@@ -124,11 +124,11 @@ CLI
 # Build library first (CLI reads from dist/)
 pnpm run build
 
-# PDS3 example (creates C3593229_RAW.png)
-bin/pds2img -i C3593229_RAW -type png
+# PDS3 example (creates C3592903_RAW.png)
+bin/pds2img -i C3592903_RAW -type png
 
 # Explicit input path and output path
-bin/pds2img -i ./tests/data/C3593229_RAW -type tiff -o ./tests/data/out.tiff
+bin/pds2img -i ./tests/data/C3592903_RAW -type tiff -o ./tests/data/out.tiff
 
 # Directory mode: convert all supported datasets in a directory
 bin/pds2img -d ./tests/data -type png
@@ -139,7 +139,7 @@ bin/pds2img -d ./tests/data -type tiff -o ./tests/out
 
 Notes:
 
-- `-i` accepts a base path (`C3593229_RAW`), `.IMG` path, or `.xml` path.
+- `-i` accepts a base path (`C3592903_RAW`), `.IMG` path, or `.xml` path.
 - `-d` converts all datasets in a directory: PDS3 (`.IMG + .LBL`) and PDS4 (`.xml`).
 - Detection order for base path input is PDS3 (`.IMG + .LBL`) then PDS4 (`.xml`).
 - In directory mode, `-o` is treated as an output directory.
@@ -154,12 +154,6 @@ pnpm install
 ```
 
 ## Get started
-
-Start the dev server, and the app will be available at [http://localhost:3000](http://localhost:3000).
-
-```bash
-pnpm run dev
-```
 
 Build the app for production:
 

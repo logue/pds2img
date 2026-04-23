@@ -16,12 +16,12 @@ function loadBuffer(filename: string): ArrayBuffer {
   return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
 }
 
-describe('PDS3Image (Voyager 1 / C3593229_RAW)', () => {
+describe('PDS3Image (Voyager 1 / C3592903_RAW)', () => {
   let image!: PDS3Image;
 
   beforeAll(() => {
-    const lblBuffer = loadBuffer('C3593229_RAW.LBL');
-    const imgBuffer = loadBuffer('C3593229_RAW.IMG');
+    const lblBuffer = loadBuffer('C3592903_RAW.LBL');
+    const imgBuffer = loadBuffer('C3592903_RAW.IMG');
     const label = parseLBL(lblBuffer);
     image = new PDS3Image(label, imgBuffer);
   });
