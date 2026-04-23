@@ -1,3 +1,4 @@
+import type { PDSImage } from '../../interfaces/PdsImage';
 import { readValue } from '../parser/dataType';
 
 /**
@@ -7,7 +8,7 @@ import { readValue } from '../parser/dataType';
  * and a binary image file. The constructor reads all required parameters
  * from the XML and validates that an `Array_2D_Image` element exists.
  */
-export class PDS4Image {
+export class PDS4Image implements PDSImage {
   width: number;
   height: number;
 

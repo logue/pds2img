@@ -4,15 +4,9 @@ import { parseLBL } from './pds3/parser/lblParser';
 import { parseXML } from './pds4/parser/xmlParser';
 import { encodeToPNG } from './encoder/pngEncoder';
 import { encodeToTIFF } from './encoder/tiffEncoder';
+import type { PDSImage } from './interfaces/PdsImage';
 
 export { PDS3Image, PDS4Image, parseLBL, parseXML };
-
-/** Common interface satisfied by both {@link PDS3Image} and {@link PDS4Image}. */
-interface PDSImage {
-  width: number;
-  height: number;
-  toFloat32Array(): Float32Array;
-}
 
 function getFileStem(fileName: string): string {
   const dotIndex = fileName.lastIndexOf('.');

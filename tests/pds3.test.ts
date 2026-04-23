@@ -7,7 +7,7 @@ import { PDS3Image } from '../src/pds3/core/pds3Image';
 import { toPNG, toTIFF } from '../src/index';
 
 const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), 'data');
-
+const TEST_IMAGE_BASE = 'C3592903_RAW'; // Voyager 1, Jupiter flyby, narrow-angle camera
 /**
  * Reads a file in the test data directory into a plain ArrayBuffer.
  */
@@ -20,8 +20,8 @@ describe('PDS3Image (Voyager 1 / C3592903_RAW)', () => {
   let image!: PDS3Image;
 
   beforeAll(() => {
-    const lblBuffer = loadBuffer('C3592903_RAW.LBL');
-    const imgBuffer = loadBuffer('C3592903_RAW.IMG');
+    const lblBuffer = loadBuffer(`${TEST_IMAGE_BASE}.LBL`);
+    const imgBuffer = loadBuffer(`${TEST_IMAGE_BASE}.IMG`);
     const label = parseLBL(lblBuffer);
     image = new PDS3Image(label, imgBuffer);
   });
@@ -42,8 +42,8 @@ describe('PDS3Image (Voyager 1 / C3592903_RAW)', () => {
   });
 
   test('uses ^IMAGE record pointer and LINE_PREFIX_BYTES for pixel offsets', () => {
-    const lblBuffer = loadBuffer('C3593229_RAW.LBL');
-    const imgBuffer = loadBuffer('C3593229_RAW.IMG');
+    const lblBuffer = loadBuffer(`${TEST_IMAGE_BASE}.LBL`);
+    const imgBuffer = loadBuffer(`${TEST_IMAGE_BASE}.IMG`);
     const label = parseLBL(lblBuffer);
     const imgBytes = new Uint8Array(imgBuffer);
     const imageObject = label.IMAGE as Record<string, number>;

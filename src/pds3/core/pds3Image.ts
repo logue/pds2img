@@ -1,3 +1,4 @@
+import type { PDSImage } from '../../interfaces/PdsImage';
 import type { PDSLabel, PDSValue } from '../parser/types';
 import { BinaryReader } from './binaryReader';
 
@@ -8,7 +9,7 @@ import { BinaryReader } from './binaryReader';
  * and a binary image file. The constructor reads geometry and scaling
  * parameters from the label and validates that the IMAGE object exists.
  */
-export class PDS3Image {
+export class PDS3Image implements PDSImage {
   private readonly label: PDSLabel;
   private readonly buffer: ArrayBuffer;
   private readonly reader: BinaryReader;

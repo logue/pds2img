@@ -1,4 +1,6 @@
 import { defineConfig } from '@rsbuild/core';
+import { readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
 // Docs: https://rsbuild.rs/config/
 export default defineConfig(({ envMode }) => {
@@ -41,5 +43,44 @@ export default defineConfig(({ envMode }) => {
       // Disable HTML output — this project is a library, not an application
       htmlPlugin: false,
     },
+    plugins: [
+      {
+        name: 'fix-self-reference',
+        setup(api) {
+          api.onAfterBuild(async () => {
+            // Only process ESM build (not UMD)
+            if (isUmd) return;
+
+            try {
+              const distDir = 'dist';
+              // Use absolute path to ensure we're targeting the right file
+              const esMFile = path.resolve(
+                process.cwd(),
+                distDir,
+                'index.es.js',
+              );
+
+              // Read the ESM bundle
+              let content = await readFile(esMFile, 'utf-8');
+
+              // Replace 'self' with 'globalThis' to fix Node.js CLI compatibility
+              // This fixes "self is not defined" errors when running CLI on macOS/Unix
+              const newContent = content.replace(/\bself\b/g, 'globalThis');
+
+              if (content !== newContent) {
+                await writeFile(esMFile, newContent, 'utf-8');
+                console.log(
+                  'Successfully replaced self with globalThis in index.es.js',
+                );
+              } else {
+                console.warn('Warning: "self" not found in index.es.js');
+              }
+            } catch (error) {
+              console.warn('Warning: Failed to fix self reference:', error);
+            }
+          });
+        },
+      },
+    ],
   };
 });
