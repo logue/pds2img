@@ -1,6 +1,3 @@
-import type { PDS3Image } from '../pds3/core/pds3Image';
-import type { PDS4Image } from '../pds4/core/pds4Image';
-
 /** Common interface satisfied by both {@link PDS3Image} and {@link PDS4Image}. */
 export interface PDSImage {
   /** Image width in pixels */
