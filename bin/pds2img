@@ -5,7 +5,7 @@ import { constants as fsConstants } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Command } from 'commander';
-import { DOMParser as XmldomParser } from 'xmldom';
+import { DOMParser as XmldomParser } from '@xmldom/xmldom';
 import { version, date } from '../dist/index.es.js';
 
 async function fileExists(filePath) {

@@ -9,8 +9,11 @@
  */
 export async function parseXML(xmlText: string): Promise<Document> {
   if (typeof DOMParser === 'undefined') {
-    const { DOMParser } = await import('xmldom');
-    return new DOMParser().parseFromString(xmlText, 'application/xml');
+    const { DOMParser } = await import('@xmldom/xmldom');
+    return new DOMParser().parseFromString(
+      xmlText,
+      'application/xml',
+    ) as unknown as Document;
   } else {
     return new DOMParser().parseFromString(xmlText, 'application/xml');
   }
