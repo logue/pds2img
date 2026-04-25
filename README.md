@@ -1,5 +1,12 @@
 # 🛰️PDS2img
 
+[![jsdelivr CDN](https://data.jsdelivr.com/v1/package/npm/pds2img/badge)](https://www.jsdelivr.com/package/npm/pds2img)
+[![NPM Downloads](https://img.shields.io/npm/dm/pds2img.svg?style=flat)](https://www.npmjs.com/package/pds2img)
+[![Open in unpkg](https://img.shields.io/badge/Open%20in-unpkg-blue)](https://uiwjs.github.io/npm-unpkg/#/pkg/pds2img/file/README.md)
+[![npm version](https://img.shields.io/npm/v/pds2img.svg)](https://www.npmjs.com/package/pds2img)
+[![Open in Gitpod](https://shields.io/badge/Open%20in-Gitpod-green?logo=Gitpod)](https://gitpod.io/#https://github.com/logue/pds2img)
+[![Twitter Follow](https://img.shields.io/twitter/follow/logue256?style=plastic)](https://twitter.com/logue256)
+
 <figure style="margin: 0 auto; text-align: center">
 
 ![C3592903_RAW](C3592903_RAW.png)

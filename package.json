@@ -44,7 +44,7 @@
     "test:watch": "rstest --watch"
   },
   "devDependencies": {
-    "@rsbuild/core": "^2.0.0",
+    "@rsbuild/core": "^2.0.1",
     "@rslint/core": "^0.5.0",
     "@rstest/adapter-rsbuild": "^0.2.6",
     "@rstest/core": "^0.9.9",
