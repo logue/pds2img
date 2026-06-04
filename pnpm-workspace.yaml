@@ -1,0 +1,5 @@
+minimumReleaseAgeExclude:
+  - happy-dom@20.10.1
+
+overrides:
+  ws: 8.20.1

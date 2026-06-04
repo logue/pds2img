@@ -10,8 +10,6 @@ import { BinaryReader } from './binaryReader';
  * parameters from the label and validates that the IMAGE object exists.
  */
 export class PDS3Image implements PDSImage {
-  private readonly label: PDSLabel;
-  private readonly buffer: ArrayBuffer;
   private readonly reader: BinaryReader;
 
   width: number;
@@ -30,9 +28,6 @@ export class PDS3Image implements PDSImage {
    * @param buffer PDS Image Data.
    */
   constructor(label: PDSLabel, buffer: ArrayBuffer) {
-    this.label = label;
-    this.buffer = buffer;
-
     const image = this.findImageObject(label);
 
     this.width = image.LINE_SAMPLES;

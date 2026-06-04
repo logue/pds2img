@@ -3,6 +3,7 @@
   "compilerOptions": {
     "lib": ["DOM"],
     "noEmit": true,
+    "rootDir": "./src",
     "useDefineForClassFields": true,
 
     /* modules */
@@ -15,7 +16,15 @@
 
     /* type checking */
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+
+    "isolatedModules": true,
+
+    /* path aliases */
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "types": ["node", "./src/env.d.ts"]
   },
-  "include": ["src"]
+  "include": ["src/**/*.ts", "src/env.d.ts"]
 }

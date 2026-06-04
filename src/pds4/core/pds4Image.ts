@@ -12,7 +12,6 @@ export class PDS4Image implements PDSImage {
   width: number;
   height: number;
 
-  private readonly buffer: ArrayBuffer;
   private readonly view: DataView;
 
   private readonly dataType: string;
@@ -26,7 +25,6 @@ export class PDS4Image implements PDSImage {
    * @param buffer PDS Image Data.
    */
   constructor(xml: Document, buffer: ArrayBuffer) {
-    this.buffer = buffer;
     this.view = new DataView(buffer);
 
     const array = xml.getElementsByTagName('Array_2D_Image').item(0);

@@ -4,11 +4,13 @@ import { parseLBL } from './pds3/parser/lblParser';
 import { parseXML } from './pds4/parser/xmlParser';
 import { encodeToPNG } from './encoder/pngEncoder';
 import { encodeToTIFF } from './encoder/tiffEncoder';
-import Meta from './Meta';
 import type { PDSImage } from './interfaces/PdsImage';
+import type MetaInterface from './interfaces/MetaInterface';
 
-const { version, date } = Meta;
-
+const { version, date }: MetaInterface = {
+  version: __APP_VERSION__,
+  date: __BUILD_DATE__,
+};
 export {
   PDS3Image,
   PDS4Image,
@@ -102,7 +104,7 @@ async function loadPDS3ArrayBufferFromDirectory(
   ]);
 
   const image = new PDS3Image(parseLBL(lblBuffer), imgBuffer);
-  return image.toFloat32Array().buffer;
+  return image.toFloat32Array().buffer as ArrayBuffer;
 }
 
 /**
@@ -147,7 +149,7 @@ async function loadPDS4ArrayBufferFromDirectory(
     .then((file) => file.arrayBuffer());
   const image = new PDS4Image(xml, imgBuffer);
 
-  return image.toFloat32Array().buffer;
+  return image.toFloat32Array().buffer as ArrayBuffer;
 }
 
 /**

@@ -1,18 +1,17 @@
 # AGENTS.md
 
-You are an expert in JavaScript, Rsbuild, and web application development. You write maintainable, performant, and accessible code.
+You are an expert in JavaScript, Rspack, Rsbuild, Rslib, and library development. You write maintainable, performant, and accessible code.
 
 ## Commands
 
-- `pnpm run dev` - Start the dev server
-- `pnpm run build` - Build the app for production
-- `pnpm run preview` - Preview the production build locally
+- `npm run build` - Build the library for production
+- `npm run dev` - Turn on watch mode, watch for changes and rebuild the library
 
 ## Docs
 
+- Rslib: https://rslib.rs/llms.txt
 - Rsbuild: https://rsbuild.rs/llms.txt
 - Rspack: https://rspack.rs/llms.txt
-- Rstest: https://rstest.rs/llms.txt
 
 ## Tools
 
