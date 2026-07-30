@@ -29,7 +29,7 @@ export class BinaryReader {
    * @param offset - Byte offset within the buffer.
    * @param bits - Sample bit-depth (8 or 16).
    * @returns Raw (unscaled) sample value.
-   * @throws If `bits` is not 8 or 16.
+   * @throws {RangeError} If `bits` is not 8 or 16.
    */
   read(offset: number, bits: number): number {
     if (bits === 8) {
@@ -44,6 +44,6 @@ export class BinaryReader {
         : this.view.getUint16(offset, this.littleEndian);
     }
 
-    throw new Error(`Unsupported bits: ${bits}`);
+    throw new RangeError(`Unsupported bits: ${bits}`);
   }
 }

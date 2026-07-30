@@ -1,25 +1,23 @@
-import { PDS3Image } from './pds3/core/pds3Image';
-import { PDS4Image } from './pds4/core/pds4Image';
-import { parseLBL } from './pds3/parser/lblParser';
-import { parseXML } from './pds4/parser/xmlParser';
-import { encodeToPNG } from './encoder/pngEncoder';
-import { encodeToTIFF } from './encoder/tiffEncoder';
-import type { PDSImage } from './interfaces/PdsImage';
-import type MetaInterface from './interfaces/MetaInterface';
+import { encodeToPNG } from '@/encoder/pngEncoder';
+import { encodeToTIFF } from '@/encoder/tiffEncoder';
+import type { PDSImage } from '@/interfaces/PdsImage';
+import { PDS3Image } from '@/pds3/core/pds3Image';
+import { parseLBL } from '@/pds3/parser/lblParser';
+import { PDS4Image } from '@/pds4/core/pds4Image';
+import { parseXML } from '@/pds4/parser/xmlParser';
+import { Meta } from '@/types/Meta';
 
-const { version, date }: MetaInterface = {
-  version: __APP_VERSION__,
-  date: __BUILD_DATE__,
-};
+const { version, date } = Meta;
+
 export {
+  date,
+  encodeToPNG,
+  encodeToTIFF,
   PDS3Image,
   PDS4Image,
   parseLBL,
   parseXML,
   version,
-  date,
-  encodeToPNG,
-  encodeToTIFF,
 };
 
 function getFileStem(fileName: string): string {

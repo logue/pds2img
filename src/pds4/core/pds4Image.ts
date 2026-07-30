@@ -1,5 +1,10 @@
 import type { PDSImage } from '../../interfaces/PdsImage';
-import { readValue } from '../parser/dataType';
+import {
+  bytesPerSample,
+  type PDS4DataType,
+  readValue,
+  toPDS4DataType,
+} from '../parser/dataType';
 
 /**
  * Parses and provides pixel-level access to a PDS4 `Array_2D_Image` product.
@@ -14,7 +19,7 @@ export class PDS4Image implements PDSImage {
 
   private readonly view: DataView;
 
-  private readonly dataType: string;
+  private readonly dataType: PDS4DataType;
   private readonly offsetBytes: number;
   private readonly scaling: number;
   private readonly valueOffset: number;
@@ -52,9 +57,10 @@ export class PDS4Image implements PDSImage {
     this.height = Number(heightEl?.textContent);
 
     const elementArray = array.getElementsByTagName('Element_Array').item(0);
-    this.dataType =
+    this.dataType = toPDS4DataType(
       elementArray?.getElementsByTagName('data_type').item(0)?.textContent ||
-      '';
+        '',
+    );
 
     this.offsetBytes = Number(
       xml
@@ -85,35 +91,14 @@ export class PDS4Image implements PDSImage {
    * @param y - Zero-based row index.
    */
   getPixel(x: number, y: number): number {
-    const bytesPerSample = this.getBytesPerSample();
+    const sampleBytes = bytesPerSample[this.dataType];
 
     const index = y * this.width + x;
-    const offset = this.offsetBytes + index * bytesPerSample;
+    const offset = this.offsetBytes + index * sampleBytes;
 
     const raw = readValue(this.view, offset, this.dataType);
 
     return raw * this.scaling + this.valueOffset;
-  }
-
-  private getBytesPerSample(): number {
-    switch (this.dataType) {
-      case 'UnsignedByte':
-      case 'SignedByte':
-        return 1;
-
-      case 'UnsignedMSB2':
-      case 'UnsignedLSB2':
-      case 'SignedMSB2':
-      case 'SignedLSB2':
-        return 2;
-
-      case 'IEEE754MSBSingle':
-      case 'IEEE754LSBSingle':
-        return 4;
-
-      default:
-        throw new Error('Unknown type');
-    }
   }
 
   /**

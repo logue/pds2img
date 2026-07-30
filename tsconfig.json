@@ -1,30 +1,15 @@
 {
-  "extends": "@tsconfig/node-lts/tsconfig.json",
-  "compilerOptions": {
-    "lib": ["DOM"],
-    "noEmit": true,
-    "rootDir": "./src",
-    "useDefineForClassFields": true,
-
-    /* modules */
-    "moduleDetection": "force",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "verbatimModuleSyntax": true,
-    "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
-
-    /* type checking */
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-
-    "isolatedModules": true,
-
-    /* path aliases */
-    "paths": {
-      "@/*": ["./src/*"]
+  "$schema": "https://json.schemastore.org/tsconfig.json",
+  "files": [],
+  "references": [
+    {
+      "path": "./tsconfig.node.json"
     },
-    "types": ["node", "./src/env.d.ts"]
-  },
-  "include": ["src/**/*.ts", "src/env.d.ts"]
+    {
+      "path": "./tsconfig.rslib.json"
+    },
+    {
+      "path": "./tsconfig.rstest.json"
+    }
+  ]
 }

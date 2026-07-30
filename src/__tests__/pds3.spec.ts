@@ -1,10 +1,10 @@
-import { describe, test, expect, beforeAll } from '@rstest/core';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { parseLBL } from '../src/pds3/parser/lblParser';
-import { PDS3Image } from '../src/pds3/core/pds3Image';
-import { toPNG, toTIFF } from '../src/index';
+import { fileURLToPath } from 'node:url';
+import { beforeAll, describe, expect, test } from '@rstest/core';
+import { toPNG, toTIFF } from '../index';
+import { PDS3Image } from '../pds3/core/pds3Image';
+import { parseLBL } from '../pds3/parser/lblParser';
 
 const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), 'data');
 const TEST_IMAGE_BASE = 'C3592903_RAW'; // Voyager 1, Jupiter flyby, narrow-angle camera

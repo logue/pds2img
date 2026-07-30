@@ -20,7 +20,7 @@
 PDS3 (Voyager, Galileo, Cassini, etc.)
 
 ```ts
-import { loadPDS3ImageByUrl, toPNG, toTIFF } from 'pds2image';
+import { loadPDS3ImageByUrl, toPNG, toTIFF } from 'pds2img';
 
 const imgUrl = '/data/C3593229_RAW.IMG';
 
@@ -35,7 +35,7 @@ const tiffBuffer = toTIFF(image);
 PDS4 (Modern spacecraft image)
 
 ```ts
-import { loadPDS4ImageByUrl, toPNG, toTIFF } from 'pds2image';
+import { loadPDS4ImageByUrl, toPNG, toTIFF } from 'pds2img';
 
 const xmlUrl =
   '/data/FLG_1739_0821318674_675RAS_N0830000FHAZ00505_0A01I4J01.xml';
@@ -53,7 +53,7 @@ const tiffBuffer = toTIFF(image);
 PDS4 (File System Access API)
 
 ```ts
-import { loadPDSImageArrayBufferFromDirectory } from 'pds2image';
+import { loadPDSImageArrayBufferFromDirectory } from 'pds2img';
 
 // Browser only: user picks a directory that contains .xml + referenced .IMG
 const directoryHandle = await window.showDirectoryPicker();

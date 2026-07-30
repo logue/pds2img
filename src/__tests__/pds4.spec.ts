@@ -1,10 +1,10 @@
-import { describe, test, expect, beforeAll } from '@rstest/core';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { parseXML } from '../src/pds4/parser/xmlParser';
-import { PDS4Image } from '../src/pds4/core/pds4Image';
-import { toPNG, toTIFF } from '../src/index';
+import { fileURLToPath } from 'node:url';
+import { beforeAll, describe, expect, test } from '@rstest/core';
+import { toPNG, toTIFF } from '../index';
+import { PDS4Image } from '../pds4/core/pds4Image';
+import { parseXML } from '../pds4/parser/xmlParser';
 
 const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), 'data');
 const PDS4_STEM = 'FLG_1739_0821318674_675RAS_N0830000FHAZ00505_0A01I4J01';

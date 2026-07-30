@@ -3,6 +3,33 @@ import type { PDSLabel, PDSValue } from '../parser/types';
 import { BinaryReader } from './binaryReader';
 
 /**
+ * Unwraps a `{ value, unit }` quantity and asserts the result is numeric.
+ *
+ * @param value - Raw {@link PDSValue} read from a parsed LBL label.
+ * @param fallback - Value to return when `value` is not numeric; omit to require a number.
+ * @returns The resolved numeric value.
+ * @throws {TypeError} If `value` is not numeric and no `fallback` is given.
+ */
+function asNumber(value: PDSValue | undefined, fallback?: number): number {
+  const resolved =
+    typeof value === 'object' && value !== null && 'value' in value
+      ? value.value
+      : value;
+
+  if (typeof resolved === 'number') {
+    return resolved;
+  }
+
+  if (fallback !== undefined) {
+    return fallback;
+  }
+
+  throw new TypeError(
+    `Expected a numeric PDS value but got: ${JSON.stringify(value)}`,
+  );
+}
+
+/**
  * Parses and provides pixel-level access to a PDS3 image.
  *
  * A PDS3 dataset consists of a text LBL label (parsed by {@link parseLBL})
@@ -30,23 +57,24 @@ export class PDS3Image implements PDSImage {
   constructor(label: PDSLabel, buffer: ArrayBuffer) {
     const image = this.findImageObject(label);
 
-    this.width = image.LINE_SAMPLES;
-    this.height = image.LINES;
-    this.bits = image.SAMPLE_BITS;
+    this.width = asNumber(image.LINE_SAMPLES);
+    this.height = asNumber(image.LINES);
+    this.bits = asNumber(image.SAMPLE_BITS);
 
-    this.prefix = image.LINE_PREFIX_BYTES || 0;
-    this.scaling = image.SCALING_FACTOR || 1;
-    this.offset = image.OFFSET || 0;
+    this.prefix = asNumber(image.LINE_PREFIX_BYTES, 0);
+    this.scaling = asNumber(image.SCALING_FACTOR, 1);
+    this.offset = asNumber(image.OFFSET, 0);
     this.invalidConstant =
       typeof image.INVALID_CONSTANT === 'number'
         ? image.INVALID_CONSTANT
         : null;
 
-    const sampleType = image.SAMPLE_TYPE || 'MSB_INTEGER';
+    const sampleType =
+      typeof image.SAMPLE_TYPE === 'string' ? image.SAMPLE_TYPE : 'MSB_INTEGER';
 
-    this.reader = new BinaryReader(buffer, sampleType) as any;
+    this.reader = new BinaryReader(buffer, sampleType);
 
-    const recordBytes = label.RECORD_BYTES as number;
+    const recordBytes = asNumber(label.RECORD_BYTES);
     const ptr = this.resolveImagePointerRecord(label['^IMAGE']);
 
     this.imageOffset = (ptr - 1) * recordBytes;
@@ -79,16 +107,28 @@ export class PDS3Image implements PDSImage {
       }
     }
 
-    throw new Error(`Unsupported ^IMAGE pointer format: ${String(pointer)}`);
+    throw new TypeError(
+      `Unsupported ^IMAGE pointer format: ${JSON.stringify(pointer)}`,
+    );
   }
 
-  private findImageObject(obj: PDSLabel): any {
-    if (obj.IMAGE) return obj.IMAGE;
+  private findImageObject(obj: PDSLabel): PDSLabel {
+    if (
+      typeof obj.IMAGE === 'object' &&
+      obj.IMAGE !== null &&
+      !Array.isArray(obj.IMAGE)
+    ) {
+      return obj.IMAGE as PDSLabel;
+    }
 
     for (const key in obj) {
-      const v = obj[key];
-      if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
-        const found = this.findImageObject(v as PDSLabel);
+      const value = obj[key];
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value)
+      ) {
+        const found = this.findImageObject(value as PDSLabel);
         if (found) {
           return found;
         }

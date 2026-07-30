@@ -7,12 +7,12 @@ export type PDSValue =
   | string
   | PDSValue[]
   | { value: PDSValue; unit: string }
-  | Record<string, any>;
+  | PDSLabel;
 
 /**
  * Dictionary of key/value pairs parsed from a PDS3 LBL label,
  * including any nested OBJECT blocks.
  */
-export interface PDSLabel {
+export type PDSLabel = {
   [key: string]: PDSValue;
-}
+};

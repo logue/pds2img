@@ -1,7 +1,9 @@
+/** For build library use */
 import { readFileSync } from 'node:fs';
 
 import { defineConfig } from '@rslib/core';
 
+const umdName = 'GeoJsonPrecision';
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8')) as {
   name: string;
   description: string;
@@ -20,7 +22,7 @@ const bannerText = `/**
 *
 * @description ${pkg.description}
 * @author ${pkg.author.name} <${pkg.author.email}>
-* @copyright 2026 By Masashi Yoshikawa All rights reserved.
+* @copyright 2022-2026 By Masashi Yoshikawa All rights reserved.
 * @license ${pkg.license}
 * @version ${pkg.version}
 * @see {@link ${pkg.homepage}}
@@ -31,8 +33,11 @@ export default defineConfig({
   lib: [
     {
       format: 'esm',
-      syntax: 'es2021',
-      dts: true,
+      dts: {
+        tsgo: true, // Enable TypeScript 7 native compiler
+        // isolated: true,  // SWC fast_dts
+        bundle: true,
+      },
       banner: {
         js: bannerText,
       },
@@ -45,8 +50,7 @@ export default defineConfig({
     },
     {
       format: 'umd',
-      syntax: 'es2021',
-      umdName: 'PDSToImage',
+      umdName,
       banner: {
         js: bannerText,
       },
@@ -61,6 +65,7 @@ export default defineConfig({
     },
   ],
   source: {
+    tsconfigPath: './tsconfig.rslib.json',
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
       __BUILD_DATE__: JSON.stringify(buildDate),
