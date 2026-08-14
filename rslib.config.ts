@@ -55,8 +55,7 @@ export default defineConfig({
       format: 'esm',
       dts: {
         tsgo: true, // Enable TypeScript 7 native compiler
-        // isolated: true,  // SWC fast_dts
-        bundle: true,
+        bundle: false,
       },
       banner: {
         js: bannerText,
