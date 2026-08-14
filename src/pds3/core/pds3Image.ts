@@ -1,5 +1,6 @@
-import type { PDSImage } from '../../interfaces/PdsImage';
-import type { PDSLabel, PDSValue } from '../parser/types';
+import type { PDSImage } from '@/interfaces/PdsImage';
+import type { PDSLabel, PDSValue } from '@/pds3/parser/types';
+
 import { BinaryReader } from './binaryReader';
 
 /**
@@ -46,7 +47,7 @@ export class PDS3Image implements PDSImage {
   private readonly prefix: number;
   private readonly scaling: number;
   private readonly offset: number;
-  private readonly invalidConstant: number | null;
+  private readonly invalidConstant: number | undefined;
   private readonly imageOffset: number;
 
   /**
@@ -67,7 +68,7 @@ export class PDS3Image implements PDSImage {
     this.invalidConstant =
       typeof image.INVALID_CONSTANT === 'number'
         ? image.INVALID_CONSTANT
-        : null;
+        : undefined;
 
     const sampleType =
       typeof image.SAMPLE_TYPE === 'string' ? image.SAMPLE_TYPE : 'MSB_INTEGER';
@@ -93,12 +94,19 @@ export class PDS3Image implements PDSImage {
       'unit' in pointer
     ) {
       return this.resolveImagePointerRecord(
-        (pointer as { value: PDSValue; unit: string }).value,
+        (
+          pointer as {
+            value: PDSValue;
+            unit: string;
+          }
+        ).value,
       );
     }
 
     if (Array.isArray(pointer)) {
-      const record = [...pointer]
+      const record = [
+        ...pointer,
+      ]
         .reverse()
         .find((value) => typeof value === 'number');
 
@@ -121,8 +129,7 @@ export class PDS3Image implements PDSImage {
       return obj.IMAGE as PDSLabel;
     }
 
-    for (const key in obj) {
-      const value = obj[key];
+    for (const value of Object.values(obj)) {
       if (
         typeof value === 'object' &&
         value !== null &&
@@ -153,7 +160,7 @@ export class PDS3Image implements PDSImage {
 
     const raw = this.reader.read(offset, this.bits);
 
-    if (this.invalidConstant !== null && raw === this.invalidConstant) {
+    if (this.invalidConstant !== undefined && raw === this.invalidConstant) {
       return Number.NaN;
     }
 

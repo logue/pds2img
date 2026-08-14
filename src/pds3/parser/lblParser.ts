@@ -1,5 +1,12 @@
 import type { PDSLabel, PDSValue } from './types';
 
+/** Matches a line-terminator (CRLF or LF) used to split LBL text into lines. */
+const LINE_BREAK = /\r?\n/;
+/** Matches and strips `/* ... *\/` inline comments from a LBL line. */
+const INLINE_COMMENT = /\/\*.*?\*\//g;
+/** Matches a `value <unit>` quantity, e.g. `1234.5 <KM>`. */
+const UNIT_SUFFIX = /^(.+?)\s*<(.+?)>$/;
+
 /**
  * Parses a PDS3 LBL label file into a structured {@link PDSLabel} dictionary.
  *
@@ -14,13 +21,15 @@ import type { PDSLabel, PDSValue } from './types';
  */
 export function parseLBL(buffer: ArrayBuffer): PDSLabel {
   const text = new TextDecoder('ascii').decode(buffer);
-  const lines = text.split(/\r?\n/);
+  const lines = text.split(LINE_BREAK);
 
   const root: PDSLabel = {};
-  const stack: PDSLabel[] = [root];
+  const stack: PDSLabel[] = [
+    root,
+  ];
 
   for (const raw of lines) {
-    const line = raw.replace(/\/\*.*?\*\//g, '').trim();
+    const line = raw.replace(INLINE_COMMENT, '').trim();
     if (!line || line.startsWith('/*')) continue;
 
     if (line.startsWith('OBJECT')) {
@@ -47,7 +56,7 @@ export function parseLBL(buffer: ArrayBuffer): PDSLabel {
 
 function parseValue(value: string): PDSValue {
   // 単位付き
-  const unitMatch = /^(.+?)\s*<(.+?)>$/.exec(value);
+  const unitMatch = UNIT_SUFFIX.exec(value);
   if (unitMatch) {
     return {
       value: parseValue(unitMatch[1]),

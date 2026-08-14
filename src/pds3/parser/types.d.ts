@@ -6,7 +6,10 @@ export type PDSValue =
   | number
   | string
   | PDSValue[]
-  | { value: PDSValue; unit: string }
+  | {
+      value: PDSValue;
+      unit: string;
+    }
   | PDSLabel;
 
 /**

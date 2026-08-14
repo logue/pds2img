@@ -1,11 +1,12 @@
 # 🛰️PDS2img
 
-[![jsdelivr CDN](https://data.jsdelivr.com/v1/package/npm/pds2img/badge)](https://www.jsdelivr.com/package/npm/pds2img)
-[![NPM Downloads](https://img.shields.io/npm/dm/pds2img.svg?style=flat)](https://www.npmjs.com/package/pds2img)
-[![Open in unpkg](https://img.shields.io/badge/Open%20in-unpkg-blue)](https://uiwjs.github.io/npm-unpkg/#/pkg/pds2img/file/README.md)
 [![npm version](https://img.shields.io/npm/v/pds2img.svg)](https://www.npmjs.com/package/pds2img)
+[![NPM Downloads](https://img.shields.io/npm/dm/pds2img.svg?style=flat)](https://www.npmjs.com/package/pds2img)
+[![jsdelivr CDN](https://data.jsdelivr.com/v1/package/npm/pds2img/badge)](https://www.jsdelivr.com/package/npm/pds2img)
+[![Open in unpkg](https://img.shields.io/badge/Open%20in-unpkg-blue)](https://uiwjs.github.io/npm-unpkg/#/pkg/pds2img/file/README.md)
 [![Open in Gitpod](https://shields.io/badge/Open%20in-Gitpod-green?logo=Gitpod)](https://gitpod.io/#https://github.com/logue/pds2img)
-[![Twitter Follow](https://img.shields.io/twitter/follow/logue256?style=plastic)](https://twitter.com/logue256)
+[![X Follow](https://img.shields.io/twitter/follow/logue256?style=plastic)](https://twitter.com/logue256)
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/logue?label=Sponsor&logo=github&color=ea4aaa)](https://github.com/sponsors/logue)
 
 <figure style="margin: 0 auto; text-align: center">
 
@@ -20,9 +21,9 @@
 PDS3 (Voyager, Galileo, Cassini, etc.)
 
 ```ts
-import { loadPDS3ImageByUrl, toPNG, toTIFF } from 'pds2img';
+import { loadPDS3ImageByUrl, toPNG, toTIFF } from "pds2img";
 
-const imgUrl = '/data/C3593229_RAW.IMG';
+const imgUrl = "/data/C3593229_RAW.IMG";
 
 // Load and parse PDS3 product
 const image = await loadPDS3ImageByUrl(imgUrl);
@@ -35,12 +36,12 @@ const tiffBuffer = toTIFF(image);
 PDS4 (Modern spacecraft image)
 
 ```ts
-import { loadPDS4ImageByUrl, toPNG, toTIFF } from 'pds2img';
+import { loadPDS4ImageByUrl, toPNG, toTIFF } from "pds2img";
 
 const xmlUrl =
-  '/data/FLG_1739_0821318674_675RAS_N0830000FHAZ00505_0A01I4J01.xml';
+  "/data/FLG_1739_0821318674_675RAS_N0830000FHAZ00505_0A01I4J01.xml";
 const imgUrl =
-  '/data/FLG_1739_0821318674_675RAS_N0830000FHAZ00505_0A01I4J01.IMG';
+  "/data/FLG_1739_0821318674_675RAS_N0830000FHAZ00505_0A01I4J01.IMG";
 
 // Load and parse PDS4 product
 const image = await loadPDS4ImageByUrl(xmlUrl, imgUrl);
@@ -53,7 +54,7 @@ const tiffBuffer = toTIFF(image);
 PDS4 (File System Access API)
 
 ```ts
-import { loadPDSImageArrayBufferFromDirectory } from 'pds2img';
+import { loadPDSImageArrayBufferFromDirectory } from "pds2img";
 
 // Browser only: user picks a directory that contains .xml + referenced .IMG
 const directoryHandle = await window.showDirectoryPicker();
@@ -74,7 +75,7 @@ function saveArrayBuffer(
   const blob = new Blob([buffer], { type: mimeType });
   const url = URL.createObjectURL(blob);
 
-  const anchor = document.createElement('a');
+  const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = filename;
   anchor.click();
@@ -83,8 +84,8 @@ function saveArrayBuffer(
 }
 
 // Example usage with previous PDS4 sample variables
-saveArrayBuffer(pngBuffer, 'image/png', 'pds4-output.png');
-saveArrayBuffer(tiffBuffer, 'image/tiff', 'pds4-output.tiff');
+saveArrayBuffer(pngBuffer, "image/png", "pds4-output.png");
+saveArrayBuffer(tiffBuffer, "image/tiff", "pds4-output.tiff");
 ```
 
 Save PNG / TIFF with user-selected location (File System Access API)
@@ -96,11 +97,11 @@ async function saveArrayBufferWithPicker(
   suggestedName: string,
 ): Promise<void> {
   // Fallback for browsers that do not support File System Access API
-  if (!('showSaveFilePicker' in window)) {
+  if (!("showSaveFilePicker" in window)) {
     const blob = new Blob([buffer], { type: mimeType });
     const url = URL.createObjectURL(blob);
 
-    const anchor = document.createElement('a');
+    const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = suggestedName;
     anchor.click();
@@ -115,7 +116,7 @@ async function saveArrayBufferWithPicker(
       {
         description: mimeType,
         accept: {
-          [mimeType]: [suggestedName.endsWith('.tiff') ? '.tiff' : '.png'],
+          [mimeType]: [suggestedName.endsWith(".tiff") ? ".tiff" : ".png"],
         },
       },
     ],
@@ -127,8 +128,8 @@ async function saveArrayBufferWithPicker(
 }
 
 // Example usage with previous PDS4 sample variables
-await saveArrayBufferWithPicker(pngBuffer, 'image/png', 'pds4-output.png');
-await saveArrayBufferWithPicker(tiffBuffer, 'image/tiff', 'pds4-output.tiff');
+await saveArrayBufferWithPicker(pngBuffer, "image/png", "pds4-output.png");
+await saveArrayBufferWithPicker(tiffBuffer, "image/tiff", "pds4-output.tiff");
 ```
 
 CLI

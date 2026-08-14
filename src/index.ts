@@ -7,6 +7,9 @@ import { PDS4Image } from '@/pds4/core/pds4Image';
 import { parseXML } from '@/pds4/parser/xmlParser';
 import { Meta } from '@/types/Meta';
 
+/** Matches the `.IMG` file extension, used to derive a sibling `.LBL` URL. */
+const IMG_EXTENSION = /\.IMG$/i;
+
 const { version, date } = Meta;
 
 export {
@@ -34,19 +37,17 @@ function hasExtension(fileName: string, extension: string): boolean {
  *
  * @param directoryHandle - A handle to the directory to search.
  * @param predicate - A function that takes a file name and returns a boolean indicating whether the file matches the desired criteria.
- * @returns A promise that resolves to a FileSystemFileHandle or null if not found.
+ * @returns A promise that resolves to a FileSystemFileHandle or undefined if not found.
  */
 async function findFileHandle(
   directoryHandle: FileSystemDirectoryHandle,
   predicate: (name: string) => boolean,
-): Promise<FileSystemFileHandle | null> {
+): Promise<FileSystemFileHandle | undefined> {
   for await (const entry of directoryHandle.values()) {
     if (entry.kind === 'file' && predicate(entry.name)) {
       return entry;
     }
   }
-
-  return null;
 }
 
 /**
@@ -55,15 +56,15 @@ async function findFileHandle(
  *
  * @param directoryHandle - A handle to the directory containing the file.
  * @param fileName - The name of the file to find.
- * @returns A promise that resolves to a FileSystemFileHandle or null if not found.
+ * @returns A promise that resolves to a FileSystemFileHandle or undefined if not found.
  */
 async function getFileHandleByName(
   directoryHandle: FileSystemDirectoryHandle,
   fileName: string,
-): Promise<FileSystemFileHandle | null> {
+): Promise<FileSystemFileHandle | undefined> {
   const normalizedName = fileName.toLowerCase();
 
-  return findFileHandle(
+  return await findFileHandle(
     directoryHandle,
     (entryName) => entryName.toLowerCase() === normalizedName,
   );
@@ -74,17 +75,17 @@ async function getFileHandleByName(
  * It looks for a `.IMG` file and its corresponding `.LBL` file, then loads the image data.
  *
  * @param directoryHandle - A handle to the directory containing the PDS3 files.
- * @returns A promise that resolves to an ArrayBuffer containing the image data, or null if not found.
+ * @returns A promise that resolves to an ArrayBuffer containing the image data, or undefined if not found.
  */
 async function loadPDS3ArrayBufferFromDirectory(
   directoryHandle: FileSystemDirectoryHandle,
-): Promise<ArrayBuffer | null> {
+): Promise<ArrayBuffer | undefined> {
   const imgHandle = await findFileHandle(directoryHandle, (fileName) =>
     hasExtension(fileName, '.img'),
   );
 
   if (!imgHandle) {
-    return null;
+    return;
   }
 
   const lblHandle = await getFileHandleByName(
@@ -93,7 +94,7 @@ async function loadPDS3ArrayBufferFromDirectory(
   );
 
   if (!lblHandle) {
-    return null;
+    return;
   }
 
   const [lblBuffer, imgBuffer] = await Promise.all([
@@ -110,17 +111,17 @@ async function loadPDS3ArrayBufferFromDirectory(
  * It looks for an XML label file, extracts the referenced image file name, and loads the image data.
  *
  * @param directoryHandle - A handle to the directory containing the PDS4 files.
- * @returns A promise that resolves to an ArrayBuffer containing the image data, or null if not found.
+ * @returns A promise that resolves to an ArrayBuffer containing the image data, or undefined if not found.
  */
 async function loadPDS4ArrayBufferFromDirectory(
   directoryHandle: FileSystemDirectoryHandle,
-): Promise<ArrayBuffer | null> {
+): Promise<ArrayBuffer | undefined> {
   const xmlHandle = await findFileHandle(directoryHandle, (fileName) =>
     hasExtension(fileName, '.xml'),
   );
 
   if (!xmlHandle) {
-    return null;
+    return;
   }
 
   const xmlText = await xmlHandle.getFile().then((file) => file.text());
@@ -159,7 +160,7 @@ async function loadPDS4ArrayBufferFromDirectory(
  */
 export async function loadPDS3ImageByUrl(url: string): Promise<PDS3Image> {
   const [lblBuffer, imgBuffer] = await Promise.all([
-    fetch(url.replace(/\.IMG$/i, '.LBL')).then((res) => res.arrayBuffer()),
+    fetch(url.replace(IMG_EXTENSION, '.LBL')).then((res) => res.arrayBuffer()),
     fetch(url).then((res) => res.arrayBuffer()),
   ]);
 

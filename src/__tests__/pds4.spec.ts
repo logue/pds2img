@@ -46,7 +46,16 @@ describe('PDS4Image (Mars 2020 Perseverance / FLG_1739)', () => {
     const out = new Uint8Array(toPNG(image));
     // PNG magic: 0x89 'P' 'N' 'G' \r \n 0x1A \n
     expect(out.slice(0, 8)).toEqual(
-      new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+      new Uint8Array([
+        137,
+        80,
+        78,
+        71,
+        13,
+        10,
+        26,
+        10,
+      ]),
     );
   });
 

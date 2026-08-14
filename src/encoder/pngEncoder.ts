@@ -1,3 +1,5 @@
+/** biome-ignore-all lint/suspicious/noBitwiseOperators: CRC-32/Adler-32 checksums and PNG byte packing are inherently bitwise. */
+
 /** CRC-32 lookup table computed with the PNG/PKZIP polynomial 0xEDB88320. */
 const CRC_TABLE = (() => {
   const table = new Uint32Array(256);
@@ -17,7 +19,7 @@ const CRC_TABLE = (() => {
 function crc32(data: Uint8Array): number {
   let crc = 0xffffffff;
   for (let i = 0; i < data.length; i++) {
-    crc = (CRC_TABLE[(crc ^ data[i]!) & 0xff]! ^ (crc >>> 8)) >>> 0;
+    crc = (CRC_TABLE[(crc ^ data[i]) & 0xff] ^ (crc >>> 8)) >>> 0;
   }
   return (crc ^ 0xffffffff) >>> 0;
 }
@@ -30,14 +32,23 @@ function adler32(data: Uint8Array): number {
   let s2 = 0;
   const MOD_ADLER = 65521;
   for (let i = 0; i < data.length; i++) {
-    s1 = (s1 + data[i]!) % MOD_ADLER;
+    s1 = (s1 + data[i]) % MOD_ADLER;
     s2 = (s2 + s1) % MOD_ADLER;
   }
   return ((s2 << 16) | s1) >>> 0;
 }
 
 /** PNG file-format signature (8 bytes). */
-const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+const PNG_SIGNATURE = new Uint8Array([
+  137,
+  80,
+  78,
+  71,
+  13,
+  10,
+  26,
+  10,
+]);
 
 /**
  * Writes a single PNG chunk (length + type + data + CRC-32) into `out`
@@ -96,8 +107,8 @@ export function encodeToPNG(
   let min = Infinity;
   let max = -Infinity;
   for (let i = 0; i < pixels.length; i++) {
-    if (pixels[i]! < min) min = pixels[i]!;
-    if (pixels[i]! > max) max = pixels[i]!;
+    if (pixels[i] < min) min = pixels[i];
+    if (pixels[i] > max) max = pixels[i];
   }
   const range = max === min ? 1 : max - min;
 
@@ -107,7 +118,7 @@ export function encodeToPNG(
   for (let y = 0; y < height; y++) {
     rawData[y * bytesPerRow] = 0; // filter method: None
     for (let x = 0; x < width; x++) {
-      const v = Math.round(((pixels[y * width + x]! - min) / range) * 65535);
+      const v = Math.round(((pixels[y * width + x] - min) / range) * 65535);
       const clamped = Math.max(0, Math.min(65535, v));
       const base = y * bytesPerRow + 1 + x * 2;
       rawData[base] = clamped >>> 8; // high byte (big-endian)

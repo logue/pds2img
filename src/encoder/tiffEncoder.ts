@@ -17,8 +17,8 @@ export function encodeToTIFF(
   let min = Infinity;
   let max = -Infinity;
   for (let i = 0; i < pixels.length; i++) {
-    if (pixels[i]! < min) min = pixels[i]!;
-    if (pixels[i]! > max) max = pixels[i]!;
+    if (pixels[i] < min) min = pixels[i];
+    if (pixels[i] > max) max = pixels[i];
   }
   const range = max === min ? 1 : max - min;
 
@@ -79,7 +79,7 @@ export function encodeToTIFF(
 
   // Image data: 16-bit grayscale pixels, little-endian, row-major
   for (let i = 0; i < pixels.length; i++) {
-    const normalized = Math.round(((pixels[i]! - min) / range) * 65535);
+    const normalized = Math.round(((pixels[i] - min) / range) * 65535);
     const clamped = Math.max(0, Math.min(65535, normalized));
     view.setUint16(imageDataOffset + i * 2, clamped, true);
   }

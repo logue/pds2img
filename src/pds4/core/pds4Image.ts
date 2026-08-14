@@ -1,10 +1,10 @@
-import type { PDSImage } from '../../interfaces/PdsImage';
+import type { PDSImage } from '@/interfaces/PdsImage';
 import {
   bytesPerSample,
   type PDS4DataType,
   readValue,
   toPDS4DataType,
-} from '../parser/dataType';
+} from '@/pds4/parser/dataType';
 
 /**
  * Parses and provides pixel-level access to a PDS4 `Array_2D_Image` product.
@@ -40,17 +40,16 @@ export class PDS4Image implements PDSImage {
     // in environments where CSS selector parsing may reject underscore-containing
     // element names (e.g. happy-dom).
     const axes = array.getElementsByTagName('Axis_Array');
-    let widthEl: Element | null = null;
-    let heightEl: Element | null = null;
-    for (let i = 0; i < axes.length; i++) {
-      const axis = axes.item(i)!;
+    let widthEl: Element | undefined;
+    let heightEl: Element | undefined;
+    for (const axis of Array.from(axes)) {
       const axisName = axis
         .getElementsByTagName('axis_name')
         .item(0)?.textContent;
       if (axisName === 'Sample') {
-        widthEl = axis.getElementsByTagName('elements').item(0);
+        widthEl = axis.getElementsByTagName('elements').item(0) ?? undefined;
       } else if (axisName === 'Line') {
-        heightEl = axis.getElementsByTagName('elements').item(0);
+        heightEl = axis.getElementsByTagName('elements').item(0) ?? undefined;
       }
     }
     this.width = Number(widthEl?.textContent);

@@ -1,14 +1,18 @@
 import {
   defineConfig,
   importPlugin,
-  js,
+  promisePlugin,
   rstestPlugin,
   ts,
   unicornPlugin,
 } from '@rslint/core';
 
-const APP_FILES = ['**/*.{ts,mts,tsx,js,mjs,jsx}'];
-const TEST_FILES = ['**/*.{test,spec}.{ts,mts,tsx,js,mjs,jsx}'];
+const APP_FILES = [
+  '**/*.{ts,mts,tsx,js,mjs,jsx,json,jsonc,yml,yaml,vue,astro,svelte}',
+];
+const TEST_FILES = [
+  '**/*.{test,spec}.{ts,mts,tsx,js,mjs,jsx}',
+];
 
 export default defineConfig([
   {
@@ -21,14 +25,20 @@ export default defineConfig([
     ],
   },
 
-  // Base JavaScript / TypeScript recommended sets.
-  js.configs.recommended,
+  // Base TypeScript recommended sets.
   ts.configs.recommended,
+  promisePlugin.configs.recommended,
   unicornPlugin.configs.recommended,
 
   {
     ...importPlugin.configs.recommended,
     files: APP_FILES,
+    plugins: [
+      '@typescript-eslint',
+      'import',
+      'promise',
+      'unicorn',
+    ],
     settings: {
       'import/resolver': {
         node: true,
@@ -38,7 +48,19 @@ export default defineConfig([
             '@': './src',
             '~': './node_modules',
           },
-          extensions: ['.js', '.ts', '.jsx', '.tsx', '.vue'],
+          extensions: [
+            '.js',
+            '.ts',
+            '.json',
+            '.jsonc',
+            '.yml',
+            '.yaml',
+            '.jsx',
+            '.tsx',
+            '.vue',
+            '.svelte',
+            '.astro',
+          ],
         },
       },
     },
@@ -49,7 +71,12 @@ export default defineConfig([
       '@typescript-eslint/ban-ts-comment': 'off',
       '@typescript-eslint/triple-slash-reference': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/array-type': ['error', { default: 'array' }],
+      '@typescript-eslint/array-type': [
+        'error',
+        {
+          default: 'array',
+        },
+      ],
       '@typescript-eslint/consistent-generic-constructors': [
         'error',
         'type-annotation',
@@ -72,7 +99,12 @@ export default defineConfig([
       // Using parent traversal is prohibited in app code. Use @/ alias instead.
       'import/no-relative-parent-imports': [
         'error',
-        { ignore: ['^@/', '^~/'] },
+        {
+          ignore: [
+            '^@/',
+            '^~/',
+          ],
+        },
       ],
       'import/order': [
         'error',
@@ -88,18 +120,14 @@ export default defineConfig([
           ],
           pathGroups: [
             {
-              pattern:
-                '{vue,vue-router,vuex,@/stores,vue-i18n,pinia,@rsbuild/**,@rstest/**,@rstest/**,@rslint/**,@vue/**}',
-              group: 'external',
-              position: 'before',
-            },
-            {
               pattern: '{@/**}',
               group: 'internal',
               position: 'before',
             },
           ],
-          pathGroupsExcludedImportTypes: ['builtin'],
+          pathGroupsExcludedImportTypes: [
+            'builtin',
+          ],
           alphabetize: {
             order: 'asc',
           },
@@ -114,6 +142,13 @@ export default defineConfig([
   {
     // Test files intentionally import from parent directories.
     files: TEST_FILES,
+    plugins: [
+      '@typescript-eslint',
+      'import',
+      'promise',
+      'unicorn',
+      'rstest',
+    ],
     rules: {
       ...rstestPlugin.configs.recommended.rules,
       '@typescript-eslint/no-explicit-any': 'warn',

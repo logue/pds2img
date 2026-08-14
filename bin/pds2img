@@ -4,8 +4,10 @@ import { access, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+
 import { Command } from 'commander';
 import { DOMParser as XmldomParser } from '@xmldom/xmldom';
+
 import { version, date } from '../dist/index.es.js';
 
 async function fileExists(filePath) {
@@ -159,9 +161,9 @@ async function buildPds4Image(inputPath, lib) {
   const imgPath = imageFileName
     ? path.resolve(path.dirname(xmlPath), imageFileName)
     : await findExistingPath([
-        path.join(path.dirname(xmlPath), fallbackImgName),
-        path.join(path.dirname(xmlPath), fallbackImgName.toLowerCase()),
-      ]);
+      path.join(path.dirname(xmlPath), fallbackImgName),
+      path.join(path.dirname(xmlPath), fallbackImgName.toLowerCase()),
+    ]);
 
   if (!imgPath || !(await fileExists(imgPath))) {
     throw new Error(
@@ -237,7 +239,7 @@ async function main() {
     if (jobs.length === 0) {
       throw new Error(
         `No convertible datasets found in directory: ${directoryPath}. ` +
-          'Expected PDS3 (.IMG + .LBL) or PDS4 (.xml).',
+        'Expected PDS3 (.IMG + .LBL) or PDS4 (.xml).',
       );
     }
 
