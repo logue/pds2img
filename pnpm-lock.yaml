@@ -13,7 +13,7 @@ importers:
     dependencies:
       '@xmldom/xmldom':
         specifier: ^0.9.11
-        version: 0.9.11
+        version: 0.9.12
       commander:
         specifier: ^15.0.0
         version: 15.0.0
@@ -706,8 +706,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@xmldom/xmldom@0.9.11':
-    resolution: {integrity: sha512-tW8bcK3hsG0/uqSnNz6TK4BkcuZSezoU7DlnYssILmZDktPnSHHuDJJFM0AJv+13gz2r0iGdrj6qqKeUnxXEDg==}
+  '@xmldom/xmldom@0.9.12':
+    resolution: {integrity: sha512-5AXjrcMClTryPe9LgZrygpB1lj7s0S9E0+W+AHaVKAVyHanafK86iPSvG5xHVSp/jC+VH1UXu0TAEmY279xH7A==}
     engines: {node: '>=14.6'}
 
   ajv-draft-04@1.0.0:
@@ -1665,7 +1665,7 @@ snapshots:
   '@typescript/typescript-win32-x64@7.0.2':
     optional: true
 
-  '@xmldom/xmldom@0.9.11': {}
+  '@xmldom/xmldom@0.9.12': {}
 
   ajv-draft-04@1.0.0(ajv@8.20.0):
     optionalDependencies:
