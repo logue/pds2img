@@ -1,87 +1,91 @@
+import { assertPixelDimensions, normalizeToUint16 } from './normalize';
+
+/** TIFF field type codes. */
+const SHORT = 3;
+const LONG = 4;
+
+/** TIFF tags written by this encoder, in ascending order as required by the spec. */
+const TAG = {
+  ImageWidth: 256,
+  ImageLength: 257,
+  BitsPerSample: 258,
+  Compression: 259,
+  PhotometricInterpretation: 262,
+  StripOffsets: 273,
+  SamplesPerPixel: 277,
+  RowsPerStrip: 278,
+  StripByteCounts: 279
+} as const;
+
+/** Size of the TIFF header in bytes. */
+const HEADER_SIZE = 8;
+/** Size of a single IFD entry in bytes. */
+const IFD_ENTRY_SIZE = 12;
+
 /**
  * Encodes pixel data as an uncompressed 16-bit grayscale TIFF file.
- * Pixel values are linearly normalized from their min/max range to [0, 65535].
- * The output uses little-endian (Intel) byte order.
+ *
+ * Pixel values are linearly normalized from their finite min/max range to
+ * `[0, 65535]`; non-finite values are written as `0`.
+ * The output uses little-endian (Intel) byte order and a single strip.
  *
  * @param pixels - Row-major Float32Array of pixel values (length = width × height)
  * @param width - Image width in pixels
  * @param height - Image height in pixels
  * @returns ArrayBuffer containing a valid TIFF file
+ * @throws {RangeError} If the dimensions do not match `pixels`.
  */
-export function encodeToTIFF(
-  pixels: Float32Array,
-  width: number,
-  height: number,
-): ArrayBuffer {
-  // Normalize pixel values to [0, 65535]
-  let min = Infinity;
-  let max = -Infinity;
-  for (let i = 0; i < pixels.length; i++) {
-    if (pixels[i] < min) min = pixels[i];
-    if (pixels[i] > max) max = pixels[i];
-  }
-  const range = max === min ? 1 : max - min;
+export function encodeToTIFF(pixels: Float32Array, width: number, height: number): ArrayBuffer {
+  assertPixelDimensions(pixels, width, height);
+  const samples = normalizeToUint16(pixels);
 
-  // Layout: 8-byte header → IFD → image data
-  const NUM_ENTRIES = 9;
-  const ifdOffset = 8;
-  // IFD: 2 (entry count) + NUM_ENTRIES * 12 (entries) + 4 (next IFD ptr = 0)
-  const ifdSize = 2 + NUM_ENTRIES * 12 + 4;
-  const imageDataOffset = ifdOffset + ifdSize;
-  const imageDataSize = width * height * 2; // 16-bit per pixel
-  const totalSize = imageDataOffset + imageDataSize;
+  const imageDataSize = samples.length * 2;
+  const entries: [tag: number, type: number, value: number][] = [
+    [TAG.ImageWidth, LONG, width],
+    [TAG.ImageLength, LONG, height],
+    [TAG.BitsPerSample, SHORT, 16],
+    [TAG.Compression, SHORT, 1], // none
+    [TAG.PhotometricInterpretation, SHORT, 1], // BlackIsZero
+    [TAG.StripOffsets, LONG, 0], // patched below
+    [TAG.SamplesPerPixel, SHORT, 1],
+    [TAG.RowsPerStrip, LONG, height],
+    [TAG.StripByteCounts, LONG, imageDataSize]
+  ];
 
-  const buffer = new ArrayBuffer(totalSize);
+  // Layout: header → IFD (count + entries + next-IFD pointer) → image data
+  const ifdSize = 2 + entries.length * IFD_ENTRY_SIZE + 4;
+  const imageDataOffset = HEADER_SIZE + ifdSize;
+
+  const buffer = new ArrayBuffer(imageDataOffset + imageDataSize);
   const view = new DataView(buffer);
-  const bytes = new Uint8Array(buffer);
 
-  // TIFF header (little-endian)
-  bytes[0] = 0x49;
-  bytes[1] = 0x49; // 'II' = little-endian
-  view.setUint16(2, 42, true); // magic number
-  view.setUint32(4, ifdOffset, true); // offset to first IFD
+  // Header: 'II' (little-endian), magic 42, offset of first IFD.
+  view.setUint16(0, 0x49_49);
+  view.setUint16(2, 42, true);
+  view.setUint32(4, HEADER_SIZE, true);
 
-  // IFD entry count
-  view.setUint16(ifdOffset, NUM_ENTRIES, true);
-  let pos = ifdOffset + 2;
+  view.setUint16(HEADER_SIZE, entries.length, true);
+  let pos = HEADER_SIZE + 2;
 
-  /**
-   * Writes one 12-byte IFD entry at the current position.
-   * For SHORT (type=3) and LONG (type=4) values with count=1 the value fits
-   * directly in the 4-byte value field, so no extra data block is needed.
-   */
-  function writeEntry(
-    tag: number,
-    type: number,
-    count: number,
-    value: number,
-  ): void {
+  for (const [tag, type, value] of entries) {
     view.setUint16(pos, tag, true);
     view.setUint16(pos + 2, type, true);
-    view.setUint32(pos + 4, count, true);
-    view.setUint32(pos + 8, value, true);
-    pos += 12;
+    view.setUint32(pos + 4, 1, true); // count
+    // SHORT/LONG values with count=1 fit directly in the 4-byte value field.
+    const resolved = tag === TAG.StripOffsets ? imageDataOffset : value;
+    if (type === SHORT) {
+      view.setUint16(pos + 8, resolved, true);
+    } else {
+      view.setUint32(pos + 8, resolved, true);
+    }
+    pos += IFD_ENTRY_SIZE;
   }
 
-  // IFD entries must appear in ascending tag order (TIFF spec §2)
-  writeEntry(256, 4, 1, width); // ImageWidth (LONG)
-  writeEntry(257, 4, 1, height); // ImageLength (LONG)
-  writeEntry(258, 3, 1, 16); // BitsPerSample = 16 (SHORT)
-  writeEntry(259, 3, 1, 1); // Compression = None (SHORT)
-  writeEntry(262, 3, 1, 1); // PhotometricInterpretation = BlackIsZero (SHORT)
-  writeEntry(273, 4, 1, imageDataOffset); // StripOffsets (LONG)
-  writeEntry(277, 3, 1, 1); // SamplesPerPixel = 1 (SHORT)
-  writeEntry(278, 4, 1, height); // RowsPerStrip = height (LONG, one strip)
-  writeEntry(279, 4, 1, imageDataSize); // StripByteCounts (LONG)
-
-  // Next IFD offset = 0 (no further IFDs)
+  // Next IFD offset = 0 (no further IFDs).
   view.setUint32(pos, 0, true);
 
-  // Image data: 16-bit grayscale pixels, little-endian, row-major
-  for (let i = 0; i < pixels.length; i++) {
-    const normalized = Math.round(((pixels[i] - min) / range) * 65535);
-    const clamped = Math.max(0, Math.min(65535, normalized));
-    view.setUint16(imageDataOffset + i * 2, clamped, true);
+  for (const [index, sample] of samples.entries()) {
+    view.setUint16(imageDataOffset + index * 2, sample, true);
   }
 
   return buffer;

@@ -1,0 +1,105 @@
+// Carbon Web Components carry their own component styles in shadow DOM, so
+// the page only needs the theme tokens, fonts, reset and type utilities.
+@use '@carbon/styles/scss/config' with (
+  $css--emit-type-custom-props: true,
+  $use-akamai-cdn: true
+);
+@use '@carbon/styles/scss/fonts' with (
+  $fonts: (
+    IBM-Plex-Serif: false
+  )
+);
+@use '@carbon/styles/scss/reset';
+@use '@carbon/styles/scss/spacing';
+@use '@carbon/styles/scss/theme';
+@use '@carbon/styles/scss/themes';
+@use '@carbon/styles/scss/type';
+// Light/dark pair toggled on <html> by index.ts.
+@use '@carbon/styles/scss/zone' with (
+  $zones: (
+    white: themes.$white,
+    g100: themes.$g100
+  )
+);
+
+@include type.type-classes();
+
+body {
+  @include type.font-family('sans');
+
+  margin: 0;
+  padding: spacing.$spacing-07 spacing.$spacing-05;
+  background-color: theme.$background;
+  color: theme.$text-primary;
+}
+
+.demo {
+  max-inline-size: 72rem;
+  margin-inline: auto;
+}
+
+.demo__header {
+  margin-block-end: spacing.$spacing-07;
+
+  h1 {
+    margin-block-end: spacing.$spacing-03;
+  }
+
+  p {
+    max-inline-size: 48rem;
+    color: theme.$text-secondary;
+  }
+}
+
+.demo__version {
+  margin-block-start: spacing.$spacing-03;
+}
+
+.demo__panel {
+  padding-block-start: spacing.$spacing-06;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.demo__inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: spacing.$spacing-07;
+}
+
+.demo__sample {
+  margin-block: spacing.$spacing-05 spacing.$spacing-07;
+  color: theme.$text-helper;
+}
+
+.demo__result {
+  cds-inline-notification {
+    max-inline-size: none;
+  }
+}
+
+.demo__figure {
+  margin: 0;
+}
+
+.demo__image {
+  display: block;
+  // Never upscale; width/height attributes keep the aspect ratio while loading.
+  max-inline-size: 100%;
+  block-size: auto;
+  background-color: theme.$layer-02;
+}
+
+.demo__figure figcaption {
+  margin-block-start: spacing.$spacing-03;
+  color: theme.$text-secondary;
+}
+
+.demo__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: spacing.$spacing-05;
+  margin-block-start: spacing.$spacing-05;
+}

@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.rslib.json",
+  "include": ["env.d.ts", "src/**/*", "src-demo/**/*"],
+  "exclude": ["**/node_modules", "**/.*/", "src/**/__tests__/*"],
+  "compilerOptions": {
+    "lib": ["ES2024", "ESNext.Array", "DOM", "DOM.Iterable", "DOM.AsyncIterable"],
+    "outDir": "demo",
+    "rootDir": "./",
+    "tsBuildInfoFile": "./.rstack/tsconfig.rsbuild.tsbuildinfo"
+  }
+}

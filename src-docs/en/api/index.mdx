@@ -1,0 +1,14 @@
+---
+title: API Overview
+description: Overview of every function, class and type exported by pds2img.
+overview: true
+overviewHeaders: [2, 3]
+---
+
+Everything is exported from the package root. Loaders turn files, buffers or URLs into an image object, and encoders turn that object into a PNG or TIFF file.
+
+```ts
+import { loadPDS3ImageByFile, toPNG, version } from 'pds2img';
+```
+
+The package also exports two metadata constants: `version` (for example `'0.2.3'`) and `date`, the build date in ISO 8601 format.

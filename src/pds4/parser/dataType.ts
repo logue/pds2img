@@ -6,46 +6,62 @@ export type PDS4DataType =
   | 'UnsignedLSB2'
   | 'SignedMSB2'
   | 'SignedLSB2'
+  | 'UnsignedMSB4'
+  | 'UnsignedLSB4'
+  | 'SignedMSB4'
+  | 'SignedLSB4'
   | 'IEEE754MSBSingle'
-  | 'IEEE754LSBSingle';
+  | 'IEEE754LSBSingle'
+  | 'IEEE754MSBDouble'
+  | 'IEEE754LSBDouble';
 
-/** All supported {@link PDS4DataType} values, used to validate raw XML text. */
-export const PDS4DataType: PDS4DataType[] = [
-  'UnsignedByte',
-  'SignedByte',
-  'UnsignedMSB2',
-  'UnsignedLSB2',
-  'SignedMSB2',
-  'SignedLSB2',
-  'IEEE754MSBSingle',
-  'IEEE754LSBSingle',
-];
+/** Decoding information for a single {@link PDS4DataType}. */
+type DataTypeSpec = {
+  /** Byte length of one sample. */
+  bytes: number;
+  /** Reads one raw sample. */
+  read: (view: DataView, offset: number) => number;
+};
+
+/** Decoding table keyed by {@link PDS4DataType}. */
+const DATA_TYPES: Record<PDS4DataType, DataTypeSpec> = {
+  UnsignedByte: { bytes: 1, read: (view, offset) => view.getUint8(offset) },
+  SignedByte: { bytes: 1, read: (view, offset) => view.getInt8(offset) },
+  UnsignedMSB2: { bytes: 2, read: (view, offset) => view.getUint16(offset, false) },
+  UnsignedLSB2: { bytes: 2, read: (view, offset) => view.getUint16(offset, true) },
+  SignedMSB2: { bytes: 2, read: (view, offset) => view.getInt16(offset, false) },
+  SignedLSB2: { bytes: 2, read: (view, offset) => view.getInt16(offset, true) },
+  UnsignedMSB4: { bytes: 4, read: (view, offset) => view.getUint32(offset, false) },
+  UnsignedLSB4: { bytes: 4, read: (view, offset) => view.getUint32(offset, true) },
+  SignedMSB4: { bytes: 4, read: (view, offset) => view.getInt32(offset, false) },
+  SignedLSB4: { bytes: 4, read: (view, offset) => view.getInt32(offset, true) },
+  IEEE754MSBSingle: { bytes: 4, read: (view, offset) => view.getFloat32(offset, false) },
+  IEEE754LSBSingle: { bytes: 4, read: (view, offset) => view.getFloat32(offset, true) },
+  IEEE754MSBDouble: { bytes: 8, read: (view, offset) => view.getFloat64(offset, false) },
+  IEEE754LSBDouble: { bytes: 8, read: (view, offset) => view.getFloat64(offset, true) }
+};
+
+/** All supported {@link PDS4DataType} values. */
+export const PDS4DataType = Object.keys(DATA_TYPES) as PDS4DataType[];
 
 /** Byte length of a single sample for each {@link PDS4DataType}. */
-export const bytesPerSample: Record<PDS4DataType, number> = {
-  UnsignedByte: 1,
-  SignedByte: 1,
-  UnsignedMSB2: 2,
-  UnsignedLSB2: 2,
-  SignedMSB2: 2,
-  SignedLSB2: 2,
-  IEEE754MSBSingle: 4,
-  IEEE754LSBSingle: 4,
-};
+export const bytesPerSample = Object.fromEntries(
+  Object.entries(DATA_TYPES).map(([type, spec]) => [type, spec.bytes])
+) as Record<PDS4DataType, number>;
 
 /**
  * Narrows a raw `data_type` string from a PDS4 XML label to a {@link PDS4DataType}.
  *
  * @param type - `data_type` text content read from the XML label.
- * @returns The validated {@link PDS4DataType}.
  * @throws {RangeError} If `type` is not one of the supported values.
  */
 export function toPDS4DataType(type: string): PDS4DataType {
-  if ((PDS4DataType as string[]).includes(type)) {
-    return type as PDS4DataType;
+  const trimmed = type.trim();
+  if (Object.hasOwn(DATA_TYPES, trimmed)) {
+    return trimmed as PDS4DataType;
   }
 
-  throw new RangeError(`Unsupported PDS4 data_type: ${type}`);
+  throw new RangeError(`Unsupported PDS4 data_type: ${trimmed}`);
 }
 
 /**
@@ -56,34 +72,6 @@ export function toPDS4DataType(type: string): PDS4DataType {
  * @param type - PDS4 {@link PDS4DataType} from the XML label.
  * @returns Raw (unscaled) sample value.
  */
-export function readValue(
-  view: DataView,
-  offset: number,
-  type: PDS4DataType,
-): number {
-  switch (type) {
-    case 'UnsignedByte':
-      return view.getUint8(offset);
-
-    case 'SignedByte':
-      return view.getInt8(offset);
-
-    case 'UnsignedMSB2':
-      return view.getUint16(offset, false);
-
-    case 'UnsignedLSB2':
-      return view.getUint16(offset, true);
-
-    case 'SignedMSB2':
-      return view.getInt16(offset, false);
-
-    case 'SignedLSB2':
-      return view.getInt16(offset, true);
-
-    case 'IEEE754MSBSingle':
-      return view.getFloat32(offset, false);
-
-    case 'IEEE754LSBSingle':
-      return view.getFloat32(offset, true);
-  }
+export function readValue(view: DataView, offset: number, type: PDS4DataType): number {
+  return DATA_TYPES[type].read(view, offset);
 }

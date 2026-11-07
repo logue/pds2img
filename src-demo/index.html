@@ -1,0 +1,123 @@
+<!doctype html>
+<html class="cds--white" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>pds2img playground</title>
+  </head>
+  <body>
+    <main class="demo">
+      <header class="demo__header">
+        <h1 class="cds--type-heading-04">pds2img playground</h1>
+        <p class="cds--type-body-01">
+          Convert NASA Planetary Data System products to 16-bit grayscale PNG / TIFF. Choose the
+          label file and the image file below. Conversion runs entirely in your browser; files are
+          never uploaded.
+        </p>
+      </header>
+
+      <cds-tabs value="pds3">
+        <cds-tab id="tab-pds3" target="panel-pds3" value="pds3">PDS3 (LBL + IMG)</cds-tab>
+        <cds-tab id="tab-pds4" target="panel-pds4" value="pds4">PDS4 (XML + IMG)</cds-tab>
+      </cds-tabs>
+
+      <!-- PDS3 -->
+      <section
+        id="panel-pds3"
+        class="demo__panel"
+        role="tabpanel"
+        aria-labelledby="tab-pds3"
+        data-format="pds3"
+      >
+        <div class="demo__inputs">
+          <cds-file-uploader
+            data-role="label"
+            label-title="Label file"
+            label-description="Detached PDS3 label (.LBL)"
+          >
+            <cds-file-uploader-button accept=".lbl .LBL" button-kind="tertiary">
+              Select .LBL file
+            </cds-file-uploader-button>
+          </cds-file-uploader>
+          <cds-file-uploader
+            data-role="data"
+            label-title="Image file"
+            label-description="PDS3 image data (.IMG)"
+          >
+            <cds-file-uploader-button accept=".img .IMG" button-kind="tertiary">
+              Select .IMG file
+            </cds-file-uploader-button>
+          </cds-file-uploader>
+        </div>
+        <p class="demo__sample cds--type-helper-text-01">
+          Sample data:
+          <cds-link
+            href="https://pds-imaging.jpl.nasa.gov/tools/atlas/record?uri=atlas:pds3:vgr:voyager:/VGISS_6xxx/VGISS_6121/DATA/C35929XX/C3592903_RAW.IMG"
+            target="_blank"
+            size="sm"
+          >
+            Voyager 1 / Saturn — C3592903_RAW
+          </cds-link>
+        </p>
+        <div class="demo__result" aria-live="polite"></div>
+      </section>
+
+      <!-- PDS4 -->
+      <section
+        id="panel-pds4"
+        class="demo__panel"
+        role="tabpanel"
+        aria-labelledby="tab-pds4"
+        data-format="pds4"
+        hidden
+      >
+        <div class="demo__inputs">
+          <cds-file-uploader
+            data-role="label"
+            label-title="Label file"
+            label-description="PDS4 XML label (.xml)"
+          >
+            <cds-file-uploader-button accept=".xml .XML" button-kind="tertiary">
+              Select .xml file
+            </cds-file-uploader-button>
+          </cds-file-uploader>
+          <cds-file-uploader
+            data-role="data"
+            label-title="Image file"
+            label-description="Data file referenced by the label (.IMG)"
+          >
+            <cds-file-uploader-button accept=".img .IMG .dat .DAT" button-kind="tertiary">
+              Select .IMG file
+            </cds-file-uploader-button>
+          </cds-file-uploader>
+        </div>
+        <p class="demo__sample cds--type-helper-text-01">
+          Sample data:
+          <cds-link
+            href="https://pds-imaging.jpl.nasa.gov/tools/atlas/record?uri=atlas:pds4:mars_2020:perseverance:/mars2020_hazcam_ops_calibrated/data/sol/01739/ids/rdr/fcam/FLG_1739_0821318674_675RAS_N0830000FHAZ00505_0A01I4J01.IMG"
+            target="_blank"
+            size="sm"
+          >
+            Mars 2020 Perseverance / Front Hazcam — FLG_1739_…_0A01I4J01
+          </cds-link>
+        </p>
+        <div class="demo__result" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <!-- Rendered into a panel's .demo__result after a successful conversion. -->
+    <template id="result-template">
+      <cds-tile class="demo__tile">
+        <figure class="demo__figure">
+          <img class="demo__image" alt="" />
+          <figcaption class="cds--type-label-01" data-field="caption"></figcaption>
+        </figure>
+        <div class="demo__actions">
+          <cds-button kind="primary" size="md" data-field="png">Download PNG</cds-button>
+          <cds-button kind="secondary" size="md" data-field="tiff">Download TIFF</cds-button>
+        </div>
+      </cds-tile>
+    </template>
+  </body>
+</html>

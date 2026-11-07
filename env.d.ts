@@ -1,11 +1,29 @@
-/* rslint-disable @typescript-eslint/no-explicit-any */
-/** biome-ignore-all lint/suspicious/noExplicitAny: for custom file type (such as yaml, vue etc.) reading. */
+// declare module '*.css';
+declare module '*.scss';
 
-// see rslib.config.ts for details
-declare const __APP_VERSION__: string;
-declare const __BUILD_DATE__: string;
+interface ImportMetaEnv {
+  /** package.json version value. */
+  readonly APP_VERSION: string;
+  /** Last build date */
+  readonly BUILD_DATE: string;
+  /** Static Site Generation to Markdown */
+  readonly SSG_MD: boolean;
+}
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
 
 /*
+declare module '*.vue' {
+  import type { DefineComponent } from 'vue';
+  const component: DefineComponent<
+    Record<string, never>,
+    Record<string, never>,
+    any
+  >;
+  export default component;
+}
+
 // Example when you are using rsbuild-plugin-yaml, comment out below:
 declare module '*.yml' {
   const content: Record<string, any>;

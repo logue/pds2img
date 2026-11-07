@@ -1,27 +1,29 @@
+import { beforeAll, describe, expect, test } from 'rstack/test';
+
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { beforeAll, describe, expect, test } from '@rstest/core';
+
 import { toPNG, toTIFF } from '../index';
 import { PDS4Image } from '../pds4/core/pds4Image';
 import { parseXML } from '../pds4/parser/xmlParser';
 
-const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), 'data');
+const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'data');
 const PDS4_STEM = 'FLG_1739_0821318674_675RAS_N0830000FHAZ00505_0A01I4J01';
 
 /**
  * Reads a file in the test data directory into a plain ArrayBuffer.
  */
 function loadBuffer(filename: string): ArrayBuffer {
-  const buf = readFileSync(join(DATA_DIR, filename));
-  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  const buffer = readFileSync(path.join(DATA_DIR, filename));
+  return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 }
 
 describe('PDS4Image (Mars 2020 Perseverance / FLG_1739)', () => {
   let image!: PDS4Image;
 
   beforeAll(async () => {
-    const xmlText = readFileSync(join(DATA_DIR, `${PDS4_STEM}.xml`), 'utf-8');
+    const xmlText = readFileSync(path.join(DATA_DIR, `${PDS4_STEM}.xml`), 'utf-8');
     const imgBuffer = loadBuffer(`${PDS4_STEM}.IMG`);
     const xml = await parseXML(xmlText);
     image = new PDS4Image(xml, imgBuffer);
@@ -39,30 +41,19 @@ describe('PDS4Image (Mars 2020 Perseverance / FLG_1739)', () => {
 
   test('toFloat32Array contains finite values', () => {
     const pixels = image.toFloat32Array();
-    expect(pixels.every(Number.isFinite)).toBe(true);
+    expect(pixels.every(value => Number.isFinite(value))).toBe(true);
   });
 
   test('toPNG returns a buffer with a valid PNG signature', () => {
     const out = new Uint8Array(toPNG(image));
     // PNG magic: 0x89 'P' 'N' 'G' \r \n 0x1A \n
-    expect(out.slice(0, 8)).toEqual(
-      new Uint8Array([
-        137,
-        80,
-        78,
-        71,
-        13,
-        10,
-        26,
-        10,
-      ]),
-    );
+    expect(out.slice(0, 8)).toEqual(new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]));
   });
 
   test('toPNG output is larger than the header alone', () => {
-    const buf = toPNG(image);
+    const buffer = toPNG(image);
     // At minimum: 8 (sig) + 25 (IHDR) + 12 (IEND) = 45 bytes
-    expect(buf.byteLength).toBeGreaterThan(45);
+    expect(buffer.byteLength).toBeGreaterThan(45);
   });
 
   test('toTIFF returns a buffer with a valid TIFF signature', () => {
@@ -75,10 +66,8 @@ describe('PDS4Image (Mars 2020 Perseverance / FLG_1739)', () => {
   });
 
   test('toTIFF output size matches pixel data', () => {
-    const buf = toTIFF(image);
+    const buffer = toTIFF(image);
     // Image data alone: width * height * 2 bytes (16-bit)
-    expect(buf.byteLength).toBeGreaterThanOrEqual(
-      image.width * image.height * 2,
-    );
+    expect(buffer.byteLength).toBeGreaterThanOrEqual(image.width * image.height * 2);
   });
 });

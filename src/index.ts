@@ -1,255 +1,41 @@
+import type { PDSImage } from '@/types/PDSImage';
+
 import { encodeToPNG } from '@/encoder/pngEncoder';
 import { encodeToTIFF } from '@/encoder/tiffEncoder';
-import type { PDSImage } from '@/interfaces/PdsImage';
-import { PDS3Image } from '@/pds3/core/pds3Image';
-import { parseLBL } from '@/pds3/parser/lblParser';
-import { PDS4Image } from '@/pds4/core/pds4Image';
-import { parseXML } from '@/pds4/parser/xmlParser';
 import { Meta } from '@/types/Meta';
 
-/** Matches the `.IMG` file extension, used to derive a sibling `.LBL` URL. */
-const IMG_EXTENSION = /\.IMG$/i;
+/** Library version (from `package.json`). */
+export const version: string = Meta.version;
+/** Library build date (ISO 8601). */
+export const date: string = Meta.date;
 
-const { version, date } = Meta;
+// Image classes and low-level parsers
+export { PDS3Image } from '@/pds3/core/pds3Image';
+export { parseLBL } from '@/pds3/parser/lblParser';
+export { PDS4Image } from '@/pds4/core/pds4Image';
+export { parseXML } from '@/pds4/parser/xmlParser';
 
+// Loaders
+export { loadPDS3Image, loadPDS3ImageByFile, loadPDS3ImageByUrl } from '@/loader/pds3Loader';
+export { loadPDS4Image, loadPDS4ImageByFile, loadPDS4ImageByUrl } from '@/loader/pds4Loader';
 export {
-  date,
-  encodeToPNG,
-  encodeToTIFF,
-  PDS3Image,
-  PDS4Image,
-  parseLBL,
-  parseXML,
-  version,
-};
+  loadPDSImageArrayBufferFromDirectory,
+  loadPDSImageFromDirectory
+} from '@/loader/directoryLoader';
 
-function getFileStem(fileName: string): string {
-  const dotIndex = fileName.lastIndexOf('.');
-  return dotIndex >= 0 ? fileName.slice(0, dotIndex) : fileName;
-}
+// Encoders
+export { encodeToPNG, encodeToTIFF };
 
-function hasExtension(fileName: string, extension: string): boolean {
-  return fileName.toLowerCase().endsWith(extension.toLowerCase());
-}
-
-/**
- * Recursively searches a directory for a file matching the given predicate.
- *
- * @param directoryHandle - A handle to the directory to search.
- * @param predicate - A function that takes a file name and returns a boolean indicating whether the file matches the desired criteria.
- * @returns A promise that resolves to a FileSystemFileHandle or undefined if not found.
- */
-async function findFileHandle(
-  directoryHandle: FileSystemDirectoryHandle,
-  predicate: (name: string) => boolean,
-): Promise<FileSystemFileHandle | undefined> {
-  for await (const entry of directoryHandle.values()) {
-    if (entry.kind === 'file' && predicate(entry.name)) {
-      return entry;
-    }
-  }
-}
-
-/**
- * Writes a PNG chunk to the output buffer `out` starting at byte offset `offset`.
- * The chunk consists of a 4-byte big-endian length, a 4-byte ASCII type, the chunk data, and a 4-byte CRC-32.
- *
- * @param directoryHandle - A handle to the directory containing the file.
- * @param fileName - The name of the file to find.
- * @returns A promise that resolves to a FileSystemFileHandle or undefined if not found.
- */
-async function getFileHandleByName(
-  directoryHandle: FileSystemDirectoryHandle,
-  fileName: string,
-): Promise<FileSystemFileHandle | undefined> {
-  const normalizedName = fileName.toLowerCase();
-
-  return await findFileHandle(
-    directoryHandle,
-    (entryName) => entryName.toLowerCase() === normalizedName,
-  );
-}
-
-/**
- * loadPDS3ArrayBufferFromDirectory attempts to find and parse a PDS3 image within the given directory.
- * It looks for a `.IMG` file and its corresponding `.LBL` file, then loads the image data.
- *
- * @param directoryHandle - A handle to the directory containing the PDS3 files.
- * @returns A promise that resolves to an ArrayBuffer containing the image data, or undefined if not found.
- */
-async function loadPDS3ArrayBufferFromDirectory(
-  directoryHandle: FileSystemDirectoryHandle,
-): Promise<ArrayBuffer | undefined> {
-  const imgHandle = await findFileHandle(directoryHandle, (fileName) =>
-    hasExtension(fileName, '.img'),
-  );
-
-  if (!imgHandle) {
-    return;
-  }
-
-  const lblHandle = await getFileHandleByName(
-    directoryHandle,
-    `${getFileStem(imgHandle.name)}.LBL`,
-  );
-
-  if (!lblHandle) {
-    return;
-  }
-
-  const [lblBuffer, imgBuffer] = await Promise.all([
-    lblHandle.getFile().then((file) => file.arrayBuffer()),
-    imgHandle.getFile().then((file) => file.arrayBuffer()),
-  ]);
-
-  const image = new PDS3Image(parseLBL(lblBuffer), imgBuffer);
-  return image.toFloat32Array().buffer as ArrayBuffer;
-}
-
-/**
- * loadPDS4ArrayBufferFromDirectory attempts to find and parse a PDS4 image within the given directory.
- * It looks for an XML label file, extracts the referenced image file name, and loads the image data.
- *
- * @param directoryHandle - A handle to the directory containing the PDS4 files.
- * @returns A promise that resolves to an ArrayBuffer containing the image data, or undefined if not found.
- */
-async function loadPDS4ArrayBufferFromDirectory(
-  directoryHandle: FileSystemDirectoryHandle,
-): Promise<ArrayBuffer | undefined> {
-  const xmlHandle = await findFileHandle(directoryHandle, (fileName) =>
-    hasExtension(fileName, '.xml'),
-  );
-
-  if (!xmlHandle) {
-    return;
-  }
-
-  const xmlText = await xmlHandle.getFile().then((file) => file.text());
-  const xml = await parseXML(xmlText);
-
-  const imageFileName =
-    xml
-      .querySelector('File_Area_Observational file_name')
-      ?.textContent?.trim() ||
-    xml.querySelector('File file_name')?.textContent?.trim();
-
-  if (!imageFileName) {
-    throw new Error('PDS4 XML does not contain a file_name entry');
-  }
-
-  const imageHandle = await getFileHandleByName(directoryHandle, imageFileName);
-
-  if (!imageHandle) {
-    throw new Error(`PDS4 image file not found: ${imageFileName}`);
-  }
-
-  const imgBuffer = await imageHandle
-    .getFile()
-    .then((file) => file.arrayBuffer());
-  const image = new PDS4Image(xml, imgBuffer);
-
-  return image.toFloat32Array().buffer as ArrayBuffer;
-}
-
-/**
- * Fetches a PDS3 image from a remote `.IMG` URL.
- * The corresponding `.LBL` file is derived by replacing the `.IMG` extension.
- *
- * @param url - Direct URL of the `.IMG` image file.
- * @returns Parsed {@link PDS3Image} instance.
- */
-export async function loadPDS3ImageByUrl(url: string): Promise<PDS3Image> {
-  const [lblBuffer, imgBuffer] = await Promise.all([
-    fetch(url.replace(IMG_EXTENSION, '.LBL')).then((res) => res.arrayBuffer()),
-    fetch(url).then((res) => res.arrayBuffer()),
-  ]);
-
-  const label = parseLBL(lblBuffer);
-  return new PDS3Image(label, imgBuffer);
-}
-
-/**
- * Fetches a PDS4 image from remote URLs.
- *
- * @param xmlUrl - URL of the PDS4 XML label file.
- * @param imgUrl - URL of the binary image data file referenced by the label.
- * @returns Parsed {@link PDS4Image} instance.
- */
-export async function loadPDS4ImageByUrl(
-  xmlUrl: string,
-  imgUrl: string,
-): Promise<PDS4Image> {
-  const [xmlText, imgBuffer] = await Promise.all([
-    fetch(xmlUrl).then((res) => res.text()),
-    fetch(imgUrl).then((res) => res.arrayBuffer()),
-  ]);
-
-  const xml = await parseXML(xmlText);
-  return new PDS4Image(xml, imgBuffer);
-}
-
-/**
- * Parses a PDS3 image from a single {@link File} object.
- * The first half of the file is treated as the LBL label and the second half
- * as the binary image data. For normal usage prefer {@link loadPDS3ImageByUrl}.
- *
- * @param file - A `File` selected via an `<input type="file">` element.
- * @returns Parsed {@link PDS3Image} instance.
- */
-export async function loadPDS3ImageByFile(file: File): Promise<PDS3Image> {
-  const [lblBuffer, imgBuffer] = await Promise.all([
-    file
-      .slice(0, file.size / 2)
-      .arrayBuffer()
-      .catch(() => new ArrayBuffer(0)),
-    file
-      .slice(file.size / 2)
-      .arrayBuffer()
-      .catch(() => new ArrayBuffer(0)),
-  ]);
-
-  const label = parseLBL(lblBuffer);
-  return new PDS3Image(label, imgBuffer);
-}
-
-/**
- * Loads a PDS image from a directory chosen via the
- * [File System Access API](https://developer.mozilla.org/docs/Web/API/File_System_API).
- *
- * Detection order:
- * 1. If the directory contains a `.IMG` file **and** a same-stem `.LBL` file,
- *    the pair is parsed as a **PDS3** image.
- * 2. If the directory contains a `.xml` file with a `file_name` element, the
- *    referenced image is parsed as a **PDS4** image.
- * 3. Otherwise an error is thrown.
- *
- * @param directoryHandle - Handle to the directory to search.
- * @returns `ArrayBuffer` containing the normalized Float32 pixel data.
- * @throws If no supported PDS dataset is found in the directory.
- */
-export async function loadPDSImageArrayBufferFromDirectory(
-  directoryHandle: FileSystemDirectoryHandle,
-): Promise<ArrayBuffer> {
-  const pds3Buffer = await loadPDS3ArrayBufferFromDirectory(directoryHandle);
-
-  if (pds3Buffer) {
-    return pds3Buffer;
-  }
-
-  const pds4Buffer = await loadPDS4ArrayBufferFromDirectory(directoryHandle);
-
-  if (pds4Buffer) {
-    return pds4Buffer;
-  }
-
-  throw new Error(
-    'No supported PDS dataset found. Expected an IMG/LBL pair or a PDS4 XML file.',
-  );
-}
+// Types
+export type { PDSImage } from '@/types/PDSImage';
+export type { BinarySource } from '@/types/BinarySource';
+export type { PDSLabel, PDSQuantity, PDSValue } from '@/pds3/parser/types';
+export type { PDS4DataType } from '@/pds4/parser/dataType';
 
 /**
  * Encodes a parsed PDS image as a **16-bit grayscale PNG** file.
- * Pixel values are linearly normalized from their min/max range to [0, 65535].
+ * Pixel values are linearly normalized from their finite min/max range to
+ * `[0, 65535]`; invalid samples (`NaN`) become `0`.
  *
  * @param image - Any parsed PDS image ({@link PDS3Image} or {@link PDS4Image}).
  * @returns `ArrayBuffer` containing a valid PNG file.
@@ -260,7 +46,8 @@ export function toPNG(image: PDSImage): ArrayBuffer {
 
 /**
  * Encodes a parsed PDS image as an **uncompressed 16-bit grayscale TIFF** file.
- * Pixel values are linearly normalized from their min/max range to [0, 65535].
+ * Pixel values are linearly normalized from their finite min/max range to
+ * `[0, 65535]`; invalid samples (`NaN`) become `0`.
  *
  * @param image - Any parsed PDS image ({@link PDS3Image} or {@link PDS4Image}).
  * @returns `ArrayBuffer` containing a valid TIFF file.

@@ -1,0 +1,8 @@
+[
+  { "type": "file", "name": "index", "label": "Overview" },
+  "loaders",
+  "images",
+  "encoders",
+  "parsers",
+  "types"
+]

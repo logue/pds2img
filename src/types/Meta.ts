@@ -1,13 +1,12 @@
-/** Build metadata embedded at bundle time. */
+/** Build information meta data */
 export type Meta = {
-  /** Package version */
+  /** Version */
   version: string;
   /** Build date */
   date: string;
 };
 
-/** Default {@link Meta}, populated from build-time defines. */
 export const Meta: Meta = {
-  version: __APP_VERSION__,
-  date: __BUILD_DATE__,
+  version: import.meta.env.APP_VERSION,
+  date: import.meta.env.BUILD_DATE
 };
