@@ -1,0 +1,25 @@
+# pds2img
+
+> NASA Planetary Data System (PDS) to Image conversion library.
+
+## Guide
+
+- [Introduction](/pds2img/guide/start/introduction.md): What pds2img is, which NASA PDS products it reads, and how the conversion works.
+- [Getting started](/pds2img/guide/start/getting-started.md): Install pds2img and convert a PDS3 or PDS4 product to PNG in a few lines.
+- [In the browser](/pds2img/guide/usage/browser.md): Use pds2img in the browser with URLs, file inputs, the File System Access API, image previews and downloads.
+- [In Node.js](/pds2img/guide/usage/node.md): Use pds2img in Node.js with Buffers, attached PDS3 labels and batch conversion.
+- [Command line](/pds2img/guide/usage/cli.md): Convert PDS3 and PDS4 products to PNG or TIFF from the command line with the pds2img CLI.
+- [Supported formats](/pds2img/guide/usage/formats.md): PDS3 label keywords, PDS4 elements and sample data types supported by pds2img.
+
+## API
+
+- [API Overview](/pds2img/api/index.md): Overview of every function, class and type exported by pds2img.
+- [Loaders](/pds2img/api/loaders.md): Reference for the pds2img loader functions for PDS3, PDS4 and directories.
+- [Images](/pds2img/api/images.md): Reference for the PDSImage interface and the PDS3Image and PDS4Image classes.
+- [Encoders](/pds2img/api/encoders.md): Reference for the pds2img PNG and TIFF encoders.
+- [Parsers](/pds2img/api/parsers.md): Reference for the pds2img PDS3 LBL and PDS4 XML label parsers.
+- [Types](/pds2img/api/types.md): Reference for the TypeScript types exported by pds2img.
+
+## Playground
+
+- [Playground](/pds2img/playground.md): Convert your own PDS3 or PDS4 files to PNG / TIFF in the browser.

@@ -1,0 +1,984 @@
+---
+url: /pds2img/guide/start/introduction.md
+---
+
+> For AI agents: the complete documentation index is available at /pds2img/llms.txt, the full documentation bundle is available at /pds2img/llms-full.txt.
+
+# Introduction
+
+**pds2img** reads image products from the [NASA Planetary Data System (PDS)](https://pds.nasa.gov/) and exports them as **16-bit grayscale PNG or TIFF** files. It runs in browsers and in Node.js.
+
+![Saturn photographed by Voyager 1 (C3592903_RAW), converted with pds2img](/saturn.png)
+
+## What it supports
+
+| Standard | Label                                       | Image data                                       | Typical missions                                   |
+| -------- | ------------------------------------------- | ------------------------------------------------ | -------------------------------------------------- |
+| **PDS3** | `.LBL` (detached) or attached to the `.IMG` | `IMAGE` object, 8/16/32-bit integer or IEEE real | Voyager, Galileo, Cassini, Mars Exploration Rovers |
+| **PDS4** | `.xml`                                      | `Array_2D_Image`, integer or IEEE 754 samples    | Mars 2020 Perseverance, InSight, OSIRIS-REx        |
+
+See [Supported formats](/pds2img/guide/usage/formats.md) for the complete list of keywords and data types.
+
+## How the conversion works
+
+1. **Parse the label.** A PDS3 label is parsed into a plain object; a PDS4 label is parsed into an XML `Document`.
+2. **Locate the pixels.** The library reads the image size, sample type, byte order, line prefix bytes and the byte offset of the image inside the data file.
+3. **Calibrate.** Each raw sample is converted to a physical value with `raw × scale + offset`. In PDS3 products, samples equal to `INVALID_CONSTANT` or `MISSING_CONSTANT` become `NaN`.
+4. **Encode.** The finite values are linearly mapped to `0…65535` and written as an uncompressed 16-bit grayscale PNG or TIFF. `NaN` pixels are written as `0`.
+
+The output keeps the full dynamic range of the source data. A display-oriented 8-bit image would lose some of it.
+
+## Design
+
+The public API is a small facade:
+
+- **Loaders** turn files, buffers or URLs into an image object: `loadPDS3Image`, `loadPDS4Image` and their `ByFile` / `ByUrl` variants.
+- **Encoders** turn an image object into a file: `toPNG` and `toTIFF`.
+
+Label parsing, binary decoding and byte-order handling are internal. The low-level classes (`PDS3Image`, `PDS4Image`) and parsers (`parseLBL`, `parseXML`) are still exported for advanced use.
+
+## Next steps
+
+- [Getting started](/pds2img/guide/start/getting-started.md): install the package and convert your first image.
+- [Playground](/pds2img/playground.md): try it in the browser with your own files.
+
+
+
+---
+url: /pds2img/guide/start/getting-started.md
+---
+
+> For AI agents: the complete documentation index is available at /pds2img/llms.txt, the full documentation bundle is available at /pds2img/llms-full.txt.
+
+# Getting started
+
+## Installation
+
+```bash
+# pnpm
+pnpm add pds2img
+# npm
+npm install pds2img
+# yarn
+yarn add pds2img
+```
+
+Node.js 22 or later is required. In browsers, the ESM build works with any modern bundler. A UMD build is also available as `pds2img/umd` and exposes the global `Pds2Img`:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/pds2img/dist/index.umd.js"></script>
+<script>
+  const { loadPDS3ImageByUrl, toPNG } = window.Pds2Img;
+</script>
+```
+
+## Get some data
+
+Every PDS image product has a **label** that describes it and **image data**. You can download sample products from the [PDS Imaging Node Atlas](https://pds-imaging.jpl.nasa.gov/tools/atlas/). The examples on this site use:
+
+- **PDS3**: Voyager 1, Saturn encounter, `C3592903_RAW.LBL` + `C3592903_RAW.IMG` ([source](https://pds-imaging.jpl.nasa.gov/tools/atlas/record?uri=atlas:pds3:vgr:voyager:/VGISS_6xxx/VGISS_6121/DATA/C35929XX/C3592903_RAW.IMG))
+- **PDS4**: Mars 2020 Perseverance Front Hazcam, `FLG_1739_…_0A01I4J01.xml` + `.IMG` ([source](https://pds-imaging.jpl.nasa.gov/tools/atlas/record?uri=atlas:pds4:mars_2020:perseverance:/mars2020_hazcam_ops_calibrated/data/sol/01739/ids/rdr/fcam/FLG_1739_0821318674_675RAS_N0830000FHAZ00505_0A01I4J01.IMG))
+
+## Convert your first image
+
+### PDS3
+
+```ts
+import { loadPDS3ImageByUrl, toPNG } from 'pds2img';
+
+// The .LBL URL is derived from the .IMG URL.
+const image = await loadPDS3ImageByUrl('/data/C3592903_RAW.IMG');
+
+console.log(image.width, image.height); // 800 800
+const png: ArrayBuffer = toPNG(image);
+```
+
+### PDS4
+
+```ts
+import { loadPDS4ImageByUrl, toTIFF } from 'pds2img';
+
+// The data file is resolved from <file_name> in the label.
+const image = await loadPDS4ImageByUrl(
+  '/data/FLG_1739_0821318674_675RAS_N0830000FHAZ00505_0A01I4J01.xml'
+);
+
+const tiff: ArrayBuffer = toTIFF(image);
+```
+
+### Node.js
+
+```ts
+import { readFile, writeFile } from 'node:fs/promises';
+import { loadPDS3Image, toPNG } from 'pds2img';
+
+const image = await loadPDS3Image(
+  await readFile('C3592903_RAW.LBL'),
+  await readFile('C3592903_RAW.IMG')
+);
+
+await writeFile('C3592903_RAW.png', Buffer.from(toPNG(image)));
+```
+
+You can also skip the code and use the [command line tool](/pds2img/guide/usage/cli.md):
+
+```bash
+npx pds2img -i C3592903_RAW -t png
+```
+
+## Next steps
+
+- [In the browser](/pds2img/guide/usage/browser.md): file inputs, directory pickers and downloads.
+- [In Node.js](/pds2img/guide/usage/node.md): buffers and batch conversion.
+- [API reference](/pds2img/api/index.md): every exported function and class.
+
+
+
+---
+url: /pds2img/guide/usage/browser.md
+---
+
+> For AI agents: the complete documentation index is available at /pds2img/llms.txt, the full documentation bundle is available at /pds2img/llms-full.txt.
+
+# In the browser
+
+All conversion happens on the client, so files are never uploaded.
+
+## From URLs
+
+```ts
+import { loadPDS3ImageByUrl, loadPDS4ImageByUrl } from 'pds2img';
+
+// PDS3: the label URL defaults to the image URL with `.LBL`.
+const voyager = await loadPDS3ImageByUrl('/data/C3592903_RAW.IMG');
+// ...or pass it explicitly when the names differ.
+const other = await loadPDS3ImageByUrl('/data/image.img', '/labels/image.lbl');
+
+// PDS4: the data URL defaults to <file_name> in the label, relative to the label URL.
+const hazcam = await loadPDS4ImageByUrl('/data/FLG_1739_…_0A01I4J01.xml');
+```
+
+A non-2xx response rejects the promise with an error that includes the status code.
+
+:::warning CORS
+The PDS archives do not always send CORS headers. If a direct fetch fails, download the files first, serve them from your own origin, or let users pick them with a file input.
+:::
+
+## From file inputs
+
+Use two inputs, one for the label and one for the image data. This is what the [playground](/pds2img/playground.md) does.
+
+```html
+<input id="label" type="file" accept=".lbl,.xml" /> <input id="data" type="file" accept=".img" />
+```
+
+```ts
+import { loadPDS3ImageByFile, loadPDS4ImageByFile, toPNG } from 'pds2img';
+
+const label = document.querySelector<HTMLInputElement>('#label')!.files![0];
+const data = document.querySelector<HTMLInputElement>('#data')!.files![0];
+
+const image = label.name.toLowerCase().endsWith('.xml')
+  ? await loadPDS4ImageByFile(label, data) // PDS4: (xml, img)
+  : await loadPDS3ImageByFile(data, label); // PDS3: (img, lbl)
+```
+
+:::tip Argument order
+`loadPDS3ImageByFile(img, lbl?)` takes the **image first** because the label is optional: a PDS3 file with an **attached label** is loaded with `loadPDS3ImageByFile(img)`. `loadPDS4ImageByFile(xml, img)` takes the label first, like `loadPDS4ImageByUrl`.
+:::
+
+## From a directory (File System Access API)
+
+In browsers that support [`showDirectoryPicker`](https://developer.mozilla.org/docs/Web/API/Window/showDirectoryPicker), you can let the user pick a folder and detect the product automatically:
+
+```ts
+import { loadPDSImageFromDirectory, toPNG } from 'pds2img';
+
+const directory = await window.showDirectoryPicker();
+const image = await loadPDSImageFromDirectory(directory);
+```
+
+The directory is searched (not recursively) for:
+
+1. an `.IMG` file with a `.LBL` file of the same name → PDS3, otherwise
+2. an `.xml` label whose `file_name` exists in the directory → PDS4.
+
+`loadPDSImageArrayBufferFromDirectory` does the same and returns the decoded `Float32Array` pixel buffer instead of the image object.
+
+## Show a preview
+
+Browsers can display 16-bit grayscale PNGs directly:
+
+```ts
+const url = URL.createObjectURL(new Blob([toPNG(image)], { type: 'image/png' }));
+document.querySelector('img')!.src = url;
+// Call URL.revokeObjectURL(url) when the preview is no longer needed.
+```
+
+## Save the result
+
+```ts
+function download(buffer: ArrayBuffer, type: string, fileName: string): void {
+  const url = URL.createObjectURL(new Blob([buffer], { type }));
+  const anchor = Object.assign(document.createElement('a'), { href: url, download: fileName });
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+download(toPNG(image), 'image/png', 'output.png');
+download(toTIFF(image), 'image/tiff', 'output.tiff');
+```
+
+With the File System Access API you can ask the user where to save:
+
+```ts
+const handle = await window.showSaveFilePicker({
+  suggestedName: 'output.tiff',
+  types: [{ description: 'TIFF image', accept: { 'image/tiff': ['.tiff', '.tif'] } }]
+});
+const writable = await handle.createWritable();
+await writable.write(toTIFF(image));
+await writable.close();
+```
+
+## Working with raw pixels
+
+Every image implements the [`PDSImage`](/pds2img/api/images.md#pdsimage) interface, so you can process calibrated values yourself. For example, you can draw them on a canvas with your own contrast stretch:
+
+```ts
+const pixels = image.toFloat32Array(); // row-major, length = width × height
+const value = image.getPixel(10, 20); // column 10, row 20
+```
+
+
+
+---
+url: /pds2img/guide/usage/node.md
+---
+
+> For AI agents: the complete documentation index is available at /pds2img/llms.txt, the full documentation bundle is available at /pds2img/llms-full.txt.
+
+# In Node.js
+
+The loaders accept Node.js `Buffer`s directly, so you don't need to slice `ArrayBuffer`s yourself.
+
+## PDS3
+
+```ts
+import { readFile, writeFile } from 'node:fs/promises';
+import { loadPDS3Image, toPNG } from 'pds2img';
+
+// Detached label: label first, then image data.
+const image = await loadPDS3Image(
+  await readFile('C3592903_RAW.LBL'),
+  await readFile('C3592903_RAW.IMG')
+);
+
+await writeFile('C3592903_RAW.png', Buffer.from(toPNG(image)));
+```
+
+For an **attached label** (label and pixels in the same file), pass only the file:
+
+```ts
+const image = await loadPDS3Image(await readFile('ATTACHED.IMG'));
+```
+
+Parsing stops at the label's `END` statement, and `^IMAGE` points into the same file.
+
+## PDS4
+
+```ts
+import { readFile, writeFile } from 'node:fs/promises';
+import { loadPDS4Image, toTIFF } from 'pds2img';
+
+const image = await loadPDS4Image(
+  await readFile('FLG_1739_…_0A01I4J01.xml', 'utf8'), // a string or a Buffer
+  await readFile('FLG_1739_…_0A01I4J01.IMG')
+);
+
+await writeFile('hazcam.tiff', Buffer.from(toTIFF(image)));
+```
+
+Node.js has no built-in `DOMParser`, so `parseXML` loads [`@xmldom/xmldom`](https://www.npmjs.com/package/@xmldom/xmldom) on demand.
+
+## Batch conversion
+
+```ts
+import { readdir, readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { loadPDS3Image, toPNG } from 'pds2img';
+
+const directory = './data';
+
+for (const name of await readdir(directory)) {
+  if (path.extname(name).toLowerCase() !== '.lbl') continue;
+
+  const stem = path.parse(name).name;
+  const image = await loadPDS3Image(
+    await readFile(path.join(directory, name)),
+    await readFile(path.join(directory, `${stem}.IMG`))
+  );
+  await writeFile(path.join(directory, `${stem}.png`), Buffer.from(toPNG(image)));
+}
+```
+
+For quick jobs, the [CLI](/pds2img/guide/usage/cli.md) already does this with `pds2img -d ./data`.
+
+## Inspecting labels
+
+Use `parseLBL` to read PDS3 metadata without decoding the pixels:
+
+```ts
+import { readFile } from 'node:fs/promises';
+import { parseLBL } from 'pds2img';
+
+const label = parseLBL(await readFile('C3592903_RAW.LBL'));
+
+label.TARGET_NAME; // 'SATURN'
+label.EXPOSURE_DURATION; // { value: 1.44, unit: 'SECOND' }
+label['^IMAGE']; // ['C3592903_RAW.IMG', 4]
+```
+
+
+
+---
+url: /pds2img/guide/usage/cli.md
+---
+
+> For AI agents: the complete documentation index is available at /pds2img/llms.txt, the full documentation bundle is available at /pds2img/llms-full.txt.
+
+# Command line
+
+The package includes a `pds2img` command.
+
+```bash
+npx pds2img --help
+```
+
+## Options
+
+| Option                     | Description                                                                      |
+| -------------------------- | -------------------------------------------------------------------------------- |
+| `-i, --input <pathOrStem>` | Input base path (`C3592903_RAW`), `.IMG` path, or `.xml` path                    |
+| `-d, --dir <directory>`    | Convert all supported products in a directory                                    |
+| `-t, --type <format>`      | Output format, `png` (default) or `tiff`. `-type` is accepted for compatibility. |
+| `-o, --output <file>`      | Output file. In `--dir` mode, an output directory.                               |
+| `-v, --version`            | Print the version and build date                                                 |
+
+Use either `-i` or `-d`, not both.
+
+## Examples
+
+```bash
+# PDS3 by base name → C3592903_RAW.png
+pds2img -i C3592903_RAW
+
+# Explicit input and output, as TIFF
+pds2img -i ./data/C3592903_RAW.IMG -t tiff -o ./out/voyager.tiff
+
+# PDS4 by label
+pds2img -i ./data/FLG_1739_0821318674_675RAS_N0830000FHAZ00505_0A01I4J01.xml
+
+# Convert every product in a directory into another directory
+pds2img -d ./data -t png -o ./out
+```
+
+## How inputs are resolved
+
+- A `.xml` path is read as PDS4. The data file comes from `<file_name>` in the label.
+- A `.IMG` path is read as PDS3 with the `.LBL` file of the same name (`.LBL` or `.lbl`).
+- A base path without an extension is tried as PDS3 (`.IMG` + `.LBL`) first, then as PDS4 (`.xml`).
+- In directory mode, every `.IMG` with a matching `.LBL`, and every `.xml`, is converted. Output files are named after the source file.
+
+:::tip Windows
+In PowerShell, run `./bin/pds2img.cmd` from a repository checkout.
+:::
+
+## Running from a checkout
+
+The CLI loads the built library from `dist/`, so build it first:
+
+```bash
+pnpm install
+pnpm run build
+bin/pds2img -i src/__tests__/data/C3592903_RAW
+```
+
+
+
+---
+url: /pds2img/guide/usage/formats.md
+---
+
+> For AI agents: the complete documentation index is available at /pds2img/llms.txt, the full documentation bundle is available at /pds2img/llms-full.txt.
+
+# Supported formats
+
+## PDS3
+
+pds2img reads the **first `IMAGE` object** in the label, searching nested `OBJECT` / `GROUP` blocks.
+
+### Label syntax
+
+| Syntax                     | Example                         | Parsed as                         |
+| -------------------------- | ------------------------------- | --------------------------------- |
+| Integer / real             | `LINES = 800`, `1.5E-3`         | `number`                          |
+| Based integer              | `SAMPLE_BIT_MASK = 2#11111111#` | `255`                             |
+| Quoted string (multi-line) | `DESCRIPTION = "…"`             | `string`, line breaks preserved   |
+| Symbol / identifier        | `'N/A'`, `MSB_INTEGER`          | `string`                          |
+| Quantity                   | `1.440 <SECOND>`                | `{ value: 1.44, unit: 'SECOND' }` |
+| Sequence / set             | `("FILE.IMG", 4)`, `{A, B}`     | array                             |
+| Blocks                     | `OBJECT = IMAGE … END_OBJECT`   | nested object                     |
+| Comments                   | `/* … */`                       | ignored, except inside strings    |
+
+Values that span several lines (strings and lists) are joined. Parsing stops at `END`, so attached labels can be parsed from the whole file.
+
+### `IMAGE` keywords
+
+| Keyword                                  | Required | Default       | Notes                                   |
+| ---------------------------------------- | -------- | ------------- | --------------------------------------- |
+| `LINES`, `LINE_SAMPLES`                  | ✓        |               | Height and width                        |
+| `SAMPLE_BITS`                            | ✓        |               | 8, 16, 32 (integers); 32, 64 (reals)    |
+| `SAMPLE_TYPE`                            |          | `MSB_INTEGER` | See below                               |
+| `LINE_PREFIX_BYTES`, `LINE_SUFFIX_BYTES` |          | `0`           | Skipped on every line                   |
+| `SCALING_FACTOR`, `OFFSET`               |          | `1`, `0`      | `value = raw × SCALING_FACTOR + OFFSET` |
+| `INVALID_CONSTANT`, `MISSING_CONSTANT`   |          |               | Matching raw samples become `NaN`       |
+
+### `^IMAGE` pointer
+
+| Form                                  | Meaning                             |
+| ------------------------------------- | ----------------------------------- |
+| `^IMAGE = 4` / `4 <RECORDS>`          | Record 4 (1-based) × `RECORD_BYTES` |
+| `^IMAGE = 3073 <BYTES>`               | Byte 3073 (1-based)                 |
+| `^IMAGE = ("FILE.IMG", 4)`            | Record 4 of a detached file         |
+| `^IMAGE = ("FILE.IMG", 3073 <BYTES>)` | Byte 3073 of a detached file        |
+| `^IMAGE = "FILE.IMG"`                 | Start of a detached file            |
+
+### `SAMPLE_TYPE`
+
+- **Signed integers**: `MSB_INTEGER`, `LSB_INTEGER`, `SUN_INTEGER`, `MAC_INTEGER`, `PC_INTEGER`, `VAX_INTEGER`
+- **Unsigned integers**: `UNSIGNED_INTEGER`, `MSB_UNSIGNED_INTEGER`, `LSB_UNSIGNED_INTEGER`, `PC_UNSIGNED_INTEGER`, `VAX_UNSIGNED_INTEGER`, …
+- **IEEE reals**: `IEEE_REAL`, `MSB_REAL`, `PC_REAL`, `LSB_REAL`
+
+Types containing `LSB`, `PC_` or `VAX_` are read as little-endian. All others are big-endian.
+
+:::warning Not supported
+VAX floating point (`VAX_REAL`), multi-band images (`BANDS > 1`; only the first band is read), and compressed products such as `.IMQ` are not supported.
+:::
+
+## PDS4
+
+pds2img reads the **first `Array_2D_Image`** in the label.
+
+| Element                                        | Notes                                                         |
+| ---------------------------------------------- | ------------------------------------------------------------- |
+| `File_Area_Observational/File/file_name`       | Data file, used by `loadPDS4ImageByUrl` and directory loading |
+| `Array_2D_Image/offset`                        | Byte offset of the array in the data file                     |
+| `Axis_Array` (`axis_name` = `Line` / `Sample`) | Height / width                                                |
+| `Element_Array/data_type`                      | See below                                                     |
+| `Element_Array/scaling_factor`, `value_offset` | `value = raw × scaling_factor + value_offset`                 |
+
+### `data_type`
+
+| Size    | Types                                                                                              |
+| ------- | -------------------------------------------------------------------------------------------------- |
+| 1 byte  | `UnsignedByte`, `SignedByte`                                                                       |
+| 2 bytes | `UnsignedMSB2`, `UnsignedLSB2`, `SignedMSB2`, `SignedLSB2`                                         |
+| 4 bytes | `UnsignedMSB4`, `UnsignedLSB4`, `SignedMSB4`, `SignedLSB4`, `IEEE754MSBSingle`, `IEEE754LSBSingle` |
+| 8 bytes | `IEEE754MSBDouble`, `IEEE754LSBDouble`                                                             |
+
+The axis order is assumed to be _Last Index Fastest_ (samples within a line are contiguous), which is the PDS4 default. `Special_Constants` are not applied.
+
+## Output
+
+`toPNG` and `toTIFF` write **16-bit grayscale** images with no compression:
+
+- the finite min/max of the calibrated pixels is mapped linearly to `0…65535`
+- `NaN` and `±Infinity` pixels are written as `0`
+- a constant image is written as all zeros
+- PNG is big-endian with stored (uncompressed) DEFLATE blocks; TIFF is little-endian (`II`) with a single strip
+
+
+
+---
+url: /pds2img/api/index.md
+---
+
+> For AI agents: the complete documentation index is available at /pds2img/llms.txt, the full documentation bundle is available at /pds2img/llms-full.txt.
+
+# API Overview
+
+## Loaders
+
+### [Loaders](/pds2img/api/loaders.md)
+
+- [PDS3](/pds2img/api/loaders.md#pds3)
+- [loadPDS3Image](/pds2img/api/loaders.md#loadpds3image)
+- [loadPDS3ImageByFile](/pds2img/api/loaders.md#loadpds3imagebyfile)
+- [loadPDS3ImageByUrl](/pds2img/api/loaders.md#loadpds3imagebyurl)
+- [PDS4](/pds2img/api/loaders.md#pds4)
+- [loadPDS4Image](/pds2img/api/loaders.md#loadpds4image)
+- [loadPDS4ImageByFile](/pds2img/api/loaders.md#loadpds4imagebyfile)
+- [loadPDS4ImageByUrl](/pds2img/api/loaders.md#loadpds4imagebyurl)
+- [Directories](/pds2img/api/loaders.md#directories)
+- [loadPDSImageFromDirectory](/pds2img/api/loaders.md#loadpdsimagefromdirectory)
+- [loadPDSImageArrayBufferFromDirectory](/pds2img/api/loaders.md#loadpdsimagearraybufferfromdirectory)
+## Images
+
+### [Images](/pds2img/api/images.md)
+
+- [PDSImage](/pds2img/api/images.md#pdsimage)
+- [PDS3Image](/pds2img/api/images.md#pds3image)
+- [PDS4Image](/pds2img/api/images.md#pds4image)
+## Encoders
+
+### [Encoders](/pds2img/api/encoders.md)
+
+- [toPNG](/pds2img/api/encoders.md#topng)
+- [toTIFF](/pds2img/api/encoders.md#totiff)
+- [encodeToPNG](/pds2img/api/encoders.md#encodetopng)
+- [encodeToTIFF](/pds2img/api/encoders.md#encodetotiff)
+## Parsers
+
+### [Parsers](/pds2img/api/parsers.md)
+
+- [parseLBL](/pds2img/api/parsers.md#parselbl)
+- [parseXML](/pds2img/api/parsers.md#parsexml)
+## Types
+
+### [Types](/pds2img/api/types.md)
+
+- [BinarySource](/pds2img/api/types.md#binarysource)
+- [PDSLabel](/pds2img/api/types.md#pdslabel)
+- [PDSValue](/pds2img/api/types.md#pdsvalue)
+- [PDSQuantity](/pds2img/api/types.md#pdsquantity)
+- [PDS4DataType](/pds2img/api/types.md#pds4datatype)
+- [PDSImage](/pds2img/api/types.md#pdsimage)
+
+
+
+---
+url: /pds2img/api/loaders.md
+---
+
+> For AI agents: the complete documentation index is available at /pds2img/llms.txt, the full documentation bundle is available at /pds2img/llms-full.txt.
+
+# Loaders
+
+Loaders turn a label and its image data into a [`PDS3Image`](/pds2img/api/images.md#pds3image) or [`PDS4Image`](/pds2img/api/images.md#pds4image). Every loader is `async`.
+
+Binary arguments accept any [`BinarySource`](/pds2img/api/types.md#binarysource): an `ArrayBuffer`, a typed array, a Node.js `Buffer`, a `Blob` or a `File`.
+
+## PDS3
+
+### loadPDS3Image
+
+```ts
+function loadPDS3Image(label: BinarySource, data?: BinarySource): Promise<PDS3Image>;
+```
+
+Loads a PDS3 image from in-memory data.
+
+| Parameter | Description                                                                 |
+| --------- | --------------------------------------------------------------------------- |
+| `label`   | Contents of the `.LBL` file. For an attached label, the `.IMG` file itself. |
+| `data`    | Contents of the `.IMG` file. Omit for attached labels.                      |
+
+```ts
+await loadPDS3Image(lblBuffer, imgBuffer); // detached label
+await loadPDS3Image(imgBuffer); // attached label
+```
+
+### loadPDS3ImageByFile
+
+```ts
+function loadPDS3ImageByFile(imgFile: Blob, lblFile?: Blob): Promise<PDS3Image>;
+```
+
+Loads a PDS3 image from `File` / `Blob` objects. Note that the **image comes first**. Omit `lblFile` when the label is attached to `imgFile`.
+
+:::warning Changed in this version
+Earlier versions took a single file and split it in half into label and data. That never matched how PDS3 files are laid out. A single argument is now read as an attached label.
+:::
+
+### loadPDS3ImageByUrl
+
+```ts
+function loadPDS3ImageByUrl(imgUrl: string | URL, lblUrl?: string | URL): Promise<PDS3Image>;
+```
+
+Fetches the image and label in parallel. `lblUrl` defaults to `imgUrl` with the `.IMG` extension replaced by `.LBL`.
+
+**Throws** if either response is not 2xx.
+
+## PDS4
+
+### loadPDS4Image
+
+```ts
+function loadPDS4Image(label: string | BinarySource, data: BinarySource): Promise<PDS4Image>;
+```
+
+Loads a PDS4 image from in-memory data. `label` may be XML text or binary (decoded as UTF-8).
+
+### loadPDS4ImageByFile
+
+```ts
+function loadPDS4ImageByFile(xmlFile: Blob, imgFile: Blob): Promise<PDS4Image>;
+```
+
+Loads a PDS4 image from `File` / `Blob` objects: the XML label first, then the data file.
+
+### loadPDS4ImageByUrl
+
+```ts
+function loadPDS4ImageByUrl(xmlUrl: string | URL, imgUrl?: string | URL): Promise<PDS4Image>;
+```
+
+Fetches the label, then the data file. If `imgUrl` is omitted, it is resolved from `File_Area_Observational/File/file_name`, relative to `xmlUrl`.
+
+**Throws** if a response is not 2xx, or if `imgUrl` is omitted and the label has no `file_name`.
+
+## Directories
+
+These functions need the [File System Access API](https://developer.mozilla.org/docs/Web/API/File_System_API), which is browser only.
+
+### loadPDSImageFromDirectory
+
+```ts
+function loadPDSImageFromDirectory(directoryHandle: FileSystemDirectoryHandle): Promise<PDSImage>;
+```
+
+Searches the directory (not recursively) and loads the first product found:
+
+1. an `.IMG` file and a `.LBL` file with the same stem → PDS3
+2. an `.xml` label whose `file_name` exists in the directory → PDS4
+
+**Throws** if no product is found, or if a PDS4 label references a missing file.
+
+### loadPDSImageArrayBufferFromDirectory
+
+```ts
+function loadPDSImageArrayBufferFromDirectory(
+  directoryHandle: FileSystemDirectoryHandle
+): Promise<ArrayBuffer>;
+```
+
+Same as `loadPDSImageFromDirectory`, but returns the `ArrayBuffer` behind `image.toFloat32Array()`.
+
+```ts
+const pixels = new Float32Array(await loadPDSImageArrayBufferFromDirectory(directory));
+```
+
+
+
+---
+url: /pds2img/api/images.md
+---
+
+> For AI agents: the complete documentation index is available at /pds2img/llms.txt, the full documentation bundle is available at /pds2img/llms-full.txt.
+
+# Images
+
+## PDSImage
+
+```ts
+interface PDSImage {
+  readonly width: number;
+  readonly height: number;
+  getPixel(x: number, y: number): number;
+  toFloat32Array(): Float32Array;
+}
+```
+
+The interface implemented by both image classes. All encoders accept it.
+
+| Member             | Description                                                                      |
+| ------------------ | -------------------------------------------------------------------------------- |
+| `width`, `height`  | Image size in pixels                                                             |
+| `getPixel(x, y)`   | Calibrated value at column `x`, row `y` (zero-based). Invalid samples are `NaN`. |
+| `toFloat32Array()` | All calibrated values, row-major, length `width × height`                        |
+
+## PDS3Image
+
+```ts
+class PDS3Image implements PDSImage {
+  constructor(label: PDSLabel, buffer: ArrayBuffer);
+  readonly width: number;
+  readonly height: number;
+  readonly bits: number;
+}
+```
+
+Decodes the first `IMAGE` object of a PDS3 label.
+
+| Parameter | Description                                                      |
+| --------- | ---------------------------------------------------------------- |
+| `label`   | Parsed label from [`parseLBL`](/pds2img/api/parsers.md#parselbl) |
+| `buffer`  | The image data file, or the whole file for attached labels       |
+
+`bits` is the `SAMPLE_BITS` value. `getPixel` returns `raw × SCALING_FACTOR + OFFSET`, or `NaN` when the raw sample equals `INVALID_CONSTANT` or `MISSING_CONSTANT`.
+
+**Throws** when the label has no `IMAGE` object or `^IMAGE` pointer, when the dimensions or sample type are invalid or unsupported, or when `buffer` is too small for the described image.
+
+```ts
+import { parseLBL, PDS3Image } from 'pds2img';
+
+const image = new PDS3Image(parseLBL(lblBuffer), imgBuffer);
+```
+
+Most code should use [`loadPDS3Image`](/pds2img/api/loaders.md#loadpds3image) instead.
+
+## PDS4Image
+
+```ts
+class PDS4Image implements PDSImage {
+  constructor(xml: Document, buffer: ArrayBuffer);
+  readonly width: number;
+  readonly height: number;
+  readonly dataType: PDS4DataType;
+}
+```
+
+Decodes the first `Array_2D_Image` of a PDS4 label.
+
+| Parameter | Description                                                      |
+| --------- | ---------------------------------------------------------------- |
+| `xml`     | Parsed label from [`parseXML`](/pds2img/api/parsers.md#parsexml) |
+| `buffer`  | The data file referenced by the label                            |
+
+`dataType` is the `Element_Array/data_type` value. `getPixel` returns `raw × scaling_factor + value_offset`.
+
+**Throws** when the label has no `Array_2D_Image`, when the axes or `data_type` are missing or unsupported, or when `buffer` is too small.
+
+```ts
+import { parseXML, PDS4Image } from 'pds2img';
+
+const image = new PDS4Image(await parseXML(xmlText), imgBuffer);
+```
+
+Most code should use [`loadPDS4Image`](/pds2img/api/loaders.md#loadpds4image) instead.
+
+
+
+---
+url: /pds2img/api/encoders.md
+---
+
+> For AI agents: the complete documentation index is available at /pds2img/llms.txt, the full documentation bundle is available at /pds2img/llms-full.txt.
+
+# Encoders
+
+All encoders write **16-bit grayscale** files. The finite min/max of the pixels is mapped linearly to `0…65535`. `NaN` and `±Infinity` pixels are written as `0`, and a constant image is written as all zeros.
+
+The encoders are synchronous and return an `ArrayBuffer` containing the whole file.
+
+## toPNG
+
+```ts
+function toPNG(image: PDSImage): ArrayBuffer;
+```
+
+Encodes an image as a PNG with stored (uncompressed) DEFLATE blocks. The file is valid but about `width × height × 2` bytes in size. Re-compress it with an image tool if size matters.
+
+## toTIFF
+
+```ts
+function toTIFF(image: PDSImage): ArrayBuffer;
+```
+
+Encodes an image as an uncompressed little-endian (`II`) baseline TIFF with a single strip.
+
+## encodeToPNG
+
+```ts
+function encodeToPNG(pixels: Float32Array, width: number, height: number): ArrayBuffer;
+```
+
+Low-level form of `toPNG` for pixel data that does not come from a PDS image. For example, you can encode a processed copy:
+
+```ts
+const pixels = image.toFloat32Array().map(value => Math.log1p(Math.max(0, value)));
+const png = encodeToPNG(pixels, image.width, image.height);
+```
+
+**Throws** `RangeError` if `width × height` does not equal `pixels.length`.
+
+## encodeToTIFF
+
+```ts
+function encodeToTIFF(pixels: Float32Array, width: number, height: number): ArrayBuffer;
+```
+
+Low-level form of `toTIFF`. **Throws** `RangeError` if `width × height` does not equal `pixels.length`.
+
+
+
+---
+url: /pds2img/api/parsers.md
+---
+
+> For AI agents: the complete documentation index is available at /pds2img/llms.txt, the full documentation bundle is available at /pds2img/llms-full.txt.
+
+# Parsers
+
+## parseLBL
+
+```ts
+function parseLBL(buffer: ArrayBuffer | ArrayBufferView): PDSLabel;
+```
+
+Parses a PDS3 label into a [`PDSLabel`](/pds2img/api/types.md#pdslabel). It accepts the bytes of a `.LBL` file, or of an `.IMG` file with an attached label. Parsing stops at `END`.
+
+```ts
+const label = parseLBL(lblBuffer);
+
+label.RECORD_BYTES; // 1024
+label['^IMAGE']; // ['C3592903_RAW.IMG', 4]
+label.IMAGE; // { LINES: 800, LINE_SAMPLES: 800, LINE_PREFIX_BYTES: 224, ... }
+label.EXPOSURE_DURATION; // { value: 1.44, unit: 'SECOND' }
+```
+
+`OBJECT` and `GROUP` blocks become nested objects keyed by their name. If several blocks share a name (for example, several `COLUMN` objects), the last one wins.
+
+See [Supported formats](/pds2img/guide/usage/formats.md#label-syntax) for how each kind of value is parsed.
+
+## parseXML
+
+```ts
+function parseXML(xmlText: string): Promise<Document>;
+```
+
+Parses a PDS4 label. It uses the global `DOMParser` when available (browsers, happy-dom, jsdom). Otherwise it loads `@xmldom/xmldom` on demand.
+
+```ts
+const xml = await parseXML(xmlText);
+xml.getElementsByTagName('target_name').item(0)?.textContent; // e.g. 'Mars'
+```
+
+:::tip
+Use `getElementsByTagName` instead of `querySelector` with PDS4 documents. Some DOM implementations do not reliably match element names that contain underscores, such as `Array_2D_Image`.
+:::
+
+
+
+---
+url: /pds2img/api/types.md
+---
+
+> For AI agents: the complete documentation index is available at /pds2img/llms.txt, the full documentation bundle is available at /pds2img/llms-full.txt.
+
+# Types
+
+All types are exported from the package root:
+
+```ts
+import type {
+  BinarySource,
+  PDS4DataType,
+  PDSImage,
+  PDSLabel,
+  PDSQuantity,
+  PDSValue
+} from 'pds2img';
+```
+
+## BinarySource
+
+```ts
+type BinarySource = ArrayBuffer | ArrayBufferView | Blob;
+```
+
+Binary input accepted by the loaders: `ArrayBuffer`, typed arrays, Node.js `Buffer`, `Blob` and `File`. Views are copied, so a pooled `Buffer` is never read past its own bytes.
+
+## PDSLabel
+
+```ts
+type PDSLabel = { [key: string]: PDSValue };
+```
+
+A parsed PDS3 label or a nested `OBJECT` / `GROUP` block.
+
+## PDSValue
+
+```ts
+type PDSValue = number | string | PDSValue[] | PDSQuantity | PDSLabel;
+```
+
+A value in a PDS3 label.
+
+## PDSQuantity
+
+```ts
+type PDSQuantity = { value: PDSValue; unit: string };
+```
+
+A value with a unit, such as `1.440 <SECOND>`.
+
+## PDS4DataType
+
+```ts
+type PDS4DataType =
+  | 'UnsignedByte'
+  | 'SignedByte'
+  | 'UnsignedMSB2'
+  | 'UnsignedLSB2'
+  | 'SignedMSB2'
+  | 'SignedLSB2'
+  | 'UnsignedMSB4'
+  | 'UnsignedLSB4'
+  | 'SignedMSB4'
+  | 'SignedLSB4'
+  | 'IEEE754MSBSingle'
+  | 'IEEE754LSBSingle'
+  | 'IEEE754MSBDouble'
+  | 'IEEE754LSBDouble';
+```
+
+The PDS4 `data_type` values that [`PDS4Image`](/pds2img/api/images.md#pds4image) can decode.
+
+## PDSImage
+
+See [Images](/pds2img/api/images.md#pdsimage).
+
+
+
+---
+url: /pds2img/playground.md
+---
+
+> For AI agents: the complete documentation index is available at /pds2img/llms.txt, the full documentation bundle is available at /pds2img/llms-full.txt.
+
+# Playground
+
+Choose **PDS3** or **PDS4**, then select the label file and the image file. The converted image appears below the form, and you can download it as a 16-bit PNG or TIFF. Everything runs locally in your browser.
+
+No data at hand? Use the sample links in each tab to download a product from the PDS Imaging Node, or see [Getting started](/pds2img/guide/start/getting-started.md#get-some-data).
+
+
+
+
+---
+url: /pds2img/index.md
+---
+
+> For AI agents: the complete documentation index is available at /pds2img/llms.txt, the full documentation bundle is available at /pds2img/llms-full.txt.
+
+# pds2img
+
+NASA PDS images to PNG / TIFF
+
+> Read PDS3 and PDS4 image products and export lossless 16-bit grayscale images, in the browser or in Node.js.
+
+[Get started](/guide/start/introduction) | [Try the playground](/playground)
+
+## Features
+
+- [🛰️ **PDS3 and PDS4**](/guide/usage/formats): Parses detached and attached PDS3 labels (.LBL) and PDS4 XML labels with Array_2D_Image products.
+- [🖼️ **Lossless 16-bit output**](/api/encoders): Pixels are calibrated with the label's scaling and offset, then normalized to 16-bit grayscale PNG or TIFF.
+- [🌐 **Browser and Node.js**](/guide/usage/browser): Load from URLs, File objects, ArrayBuffers, Node.js Buffers or a directory picked with the File System Access API.
+- [⌨️ **Command line**](/guide/usage/cli): Convert a single product or a whole directory with the bundled pds2img CLI.
+- [📦 **No native dependencies**](/guide/start/introduction): The PNG and TIFF encoders are written in TypeScript. xmldom is only loaded in environments without DOMParser.
+- [🧩 **Typed API**](/api/): Ships TypeScript declarations for every public function, class and label type.
+
+
