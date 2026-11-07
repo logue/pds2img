@@ -90,9 +90,5 @@
   "packageManager": "pnpm@12.18.0",
   "engines": {
     "node": ">=22"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://npmjs.org"
   }
 }
