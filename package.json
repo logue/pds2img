@@ -30,7 +30,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "pds2img": "./bin/pds2img"
+    "pds2img": "bin/pds2img"
   },
   "files": [
     "dist",
